@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Change PIN - ChoreBank{% endblock %}
+{% block page_title %}Change Your PIN{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'pin_change' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="current_pin" class="form-label fw-bold">Current PIN</label>
+                        <input type="password"
+                               name="current_pin"
+                               id="current_pin"
+                               class="form-control"
+                               inputmode="numeric"
+                               maxlength="4"
+                               pattern="[0-9]{4}"
+                               placeholder="----"
+                               autocomplete="off"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_pin" class="form-label fw-bold">New PIN</label>
+                        <input type="password"
+                               name="new_pin"
+                               id="new_pin"
+                               class="form-control"
+                               inputmode="numeric"
+                               maxlength="4"
+                               pattern="[0-9]{4}"
+                               placeholder="----"
+                               autocomplete="off"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_pin" class="form-label fw-bold">Confirm New PIN</label>
+                        <input type="password"
+                               name="confirm_pin"
+                               id="confirm_pin"
+                               class="form-control"
+                               inputmode="numeric"
+                               maxlength="4"
+                               pattern="[0-9]{4}"
+                               placeholder="----"
+                               autocomplete="off"
+                               required>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Update PIN</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

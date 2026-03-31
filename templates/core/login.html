@@ -1,0 +1,249 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log In - ChoreBank</title>
+
+    <!-- Google Fonts: Nunito -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- AdminLTE 4 CSS (for consistent styling) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/css/adminlte.min.css">
+
+    <!-- ChoreBank pastel overrides -->
+    <link rel="stylesheet" href="{% static 'css/chorebank.css' %}">
+
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--cb-bg) 0%, #EDE7F6 100%);
+        }
+        .login-container {
+            max-width: 520px;
+            width: 100%;
+            padding: 2rem 1rem;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header .brand-emoji {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .login-header h1 {
+            font-weight: 700;
+            color: var(--cb-text);
+            margin-bottom: 0.25rem;
+        }
+        .login-header .tagline {
+            color: var(--cb-text-muted);
+            font-size: 1.1rem;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        @media (min-width: 768px) {
+            .login-container { max-width: 640px; }
+            .card-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        .login-card {
+            background: var(--cb-card-bg);
+            border: 3px solid transparent;
+        }
+        .login-card.selected {
+            border-color: var(--cb-kid-accent);
+            box-shadow: 0 6px 20px rgba(177, 156, 217, 0.3);
+            transform: translateY(-4px);
+        }
+        .pin-section {
+            display: none;
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .pin-section.visible {
+            display: block;
+        }
+        .pin-section .greeting {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--cb-text);
+            margin-bottom: 1rem;
+        }
+        .pin-section .greeting .emoji {
+            font-size: 1.5rem;
+        }
+        .pin-input {
+            font-size: 2rem;
+            letter-spacing: 0.75rem;
+            text-align: center;
+            max-width: 200px;
+            margin: 0 auto;
+            border: 2px solid #E0D6F0;
+            border-radius: var(--cb-border-radius);
+            padding: 0.5rem;
+        }
+        .pin-input:focus {
+            border-color: var(--cb-kid-accent);
+            box-shadow: 0 0 0 0.2rem rgba(177, 156, 217, 0.25);
+            outline: none;
+        }
+        .btn-login {
+            background-color: var(--cb-kid-accent);
+            border-color: var(--cb-kid-accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 0.6rem 2rem;
+            border-radius: var(--cb-border-radius);
+        }
+        .btn-login:hover {
+            background-color: #9B86C3;
+            border-color: #9B86C3;
+            color: #fff;
+        }
+        .not-you-link {
+            color: var(--cb-text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .not-you-link:hover {
+            color: var(--cb-text);
+        }
+        .error-alert {
+            background-color: #FDE8E6;
+            color: #C0392B;
+            border: none;
+            border-radius: var(--cb-border-radius);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <!-- Header -->
+    <div class="login-header">
+        <span class="brand-emoji">&#x1F3E6;</span>
+        <h1>ChoreBank</h1>
+        <p class="tagline">Who's ready to earn some time?</p>
+    </div>
+
+    <!-- Error message -->
+    {% if error %}
+    <div class="alert error-alert text-center mb-3" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Card picker -->
+    <div id="card-picker">
+        <div class="card-grid">
+            {% for u in users %}
+            <div class="login-card card {% if u.username == selected_username %}selected{% endif %}"
+                 data-username="{{ u.username }}"
+                 data-firstname="{{ u.first_name }}"
+                 data-emoji="{{ u.emoji_avatar }}"
+                 onclick="selectUser(this)">
+                <span class="avatar-emoji">{{ u.emoji_avatar }}</span>
+                <span class="member-name">{{ u.first_name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- PIN entry form -->
+    <form method="post" action="{% url 'login' %}" id="login-form">
+        {% csrf_token %}
+        <input type="hidden" name="username" id="selected-username"
+               value="{{ selected_username|default:'' }}">
+
+        <div id="pin-section" class="pin-section {% if selected_username %}visible{% endif %}">
+            <p class="greeting">
+                Enter your PIN, <span id="greeting-name">{{ selected_username|default:'' }}</span>!
+                <span class="emoji" id="greeting-emoji"></span>
+            </p>
+            <input type="password"
+                   name="pin"
+                   id="pin-input"
+                   class="form-control pin-input"
+                   inputmode="numeric"
+                   maxlength="4"
+                   pattern="[0-9]{4}"
+                   placeholder="----"
+                   autocomplete="off"
+                   required>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-login">Let's Go!</button>
+            </div>
+            <div class="mt-2">
+                <span class="not-you-link" onclick="deselectUser()">Not you? Pick again.</span>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function selectUser(card) {
+        // Remove selected from all cards
+        document.querySelectorAll('.login-card').forEach(function(c) {
+            c.classList.remove('selected');
+        });
+        // Select this card
+        card.classList.add('selected');
+
+        // Update hidden field
+        var username = card.getAttribute('data-username');
+        var firstname = card.getAttribute('data-firstname');
+        var emoji = card.getAttribute('data-emoji');
+
+        document.getElementById('selected-username').value = username;
+        document.getElementById('greeting-name').textContent = firstname;
+        document.getElementById('greeting-emoji').textContent = emoji;
+
+        // Show PIN section
+        document.getElementById('pin-section').classList.add('visible');
+
+        // Focus the PIN input
+        var pinInput = document.getElementById('pin-input');
+        pinInput.value = '';
+        pinInput.focus();
+    }
+
+    function deselectUser() {
+        document.querySelectorAll('.login-card').forEach(function(c) {
+            c.classList.remove('selected');
+        });
+        document.getElementById('selected-username').value = '';
+        document.getElementById('pin-section').classList.remove('visible');
+        document.getElementById('pin-input').value = '';
+    }
+
+    // On page load, if there's a selected user (error state), focus PIN input
+    document.addEventListener('DOMContentLoaded', function() {
+        var selected = document.querySelector('.login-card.selected');
+        if (selected) {
+            var firstname = selected.getAttribute('data-firstname');
+            var emoji = selected.getAttribute('data-emoji');
+            document.getElementById('greeting-name').textContent = firstname;
+            document.getElementById('greeting-emoji').textContent = emoji;
+            document.getElementById('pin-input').focus();
+        }
+    });
+</script>
+
+</body>
+</html>
