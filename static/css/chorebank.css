@@ -1,1 +1,215 @@
-/* ChoreBank pastel overrides - populated in Task 2 */
+/* ==========================================================================
+   ChoreBank -- Pastel theme overrides for AdminLTE 4
+   Soft, kid-friendly palette with Nunito font
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   CSS Custom Properties
+   -------------------------------------------------------------------------- */
+:root {
+    /* AdminLTE overrides */
+    --lte-primary: #7C9CBF;
+    --lte-sidebar-bg: #F0EBF4;
+    --lte-sidebar-color: #5B4A6A;
+    --lte-sidebar-hover-bg: #E4DCF0;
+    --lte-header-bg: #FAFAFA;
+
+    /* Bootstrap color overrides */
+    --bs-primary: #7C9CBF;
+    --bs-primary-rgb: 124, 156, 191;
+    --bs-success: #8BC6A8;
+    --bs-success-rgb: 139, 198, 168;
+    --bs-info: #89C4D8;
+    --bs-info-rgb: 137, 196, 216;
+    --bs-warning: #F2D07A;
+    --bs-warning-rgb: 242, 208, 122;
+    --bs-danger: #E8928A;
+    --bs-danger-rgb: 232, 146, 138;
+
+    /* ChoreBank tokens */
+    --cb-bg: #FAF8FC;
+    --cb-card-bg: #FFFFFF;
+    --cb-text: #3D3D5C;
+    --cb-text-muted: #8888A0;
+    --cb-kid-accent: #B19CD9;
+    --cb-parent-accent: #7C9CBF;
+    --cb-border-radius: 0.75rem;
+    --cb-shadow: 0 2px 12px rgba(61, 61, 92, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   Base styles
+   -------------------------------------------------------------------------- */
+body {
+    background-color: var(--cb-bg);
+    color: var(--cb-text);
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar overrides
+   -------------------------------------------------------------------------- */
+.app-sidebar {
+    background-color: var(--lte-sidebar-bg) !important;
+}
+
+.app-sidebar .sidebar-brand .brand-text {
+    color: var(--lte-sidebar-color);
+}
+
+.app-sidebar .nav-link {
+    color: var(--lte-sidebar-color);
+    border-radius: 0.5rem;
+    margin: 0.15rem 0.5rem;
+}
+
+.app-sidebar .nav-link:hover {
+    background-color: var(--lte-sidebar-hover-bg);
+}
+
+.app-sidebar .nav-link.active {
+    background-color: var(--lte-sidebar-hover-bg);
+    font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Header overrides
+   -------------------------------------------------------------------------- */
+.app-header {
+    background-color: var(--lte-header-bg) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+   Card styling
+   -------------------------------------------------------------------------- */
+.card {
+    border: none;
+    border-radius: var(--cb-border-radius);
+    box-shadow: var(--cb-shadow);
+    background-color: var(--cb-card-bg);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+   Button overrides -- pastel variants
+   -------------------------------------------------------------------------- */
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #6B8BAE;
+    border-color: #6B8BAE;
+    color: #fff;
+}
+
+.btn-success {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+    color: #fff;
+}
+
+.btn-success:hover {
+    background-color: #7AB697;
+    border-color: #7AB697;
+    color: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   Role accent classes
+   -------------------------------------------------------------------------- */
+.kid-accent {
+    --accent-color: var(--cb-kid-accent);
+}
+
+.kid-accent .card {
+    border-left: 4px solid var(--cb-kid-accent);
+}
+
+.parent-accent {
+    --accent-color: var(--cb-parent-accent);
+}
+
+.parent-accent .card {
+    border-left: 4px solid var(--cb-parent-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Login card styles (card-picker for Plan 02)
+   -------------------------------------------------------------------------- */
+.login-card {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-radius: var(--cb-border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(61, 61, 92, 0.15);
+}
+
+.login-card:active {
+    transform: translateY(-1px);
+}
+
+.login-card .avatar-emoji {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.login-card .member-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--cb-text);
+}
+
+/* --------------------------------------------------------------------------
+   Utility classes
+   -------------------------------------------------------------------------- */
+.text-muted {
+    color: var(--cb-text-muted) !important;
+}
+
+.rounded-cb {
+    border-radius: var(--cb-border-radius);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive adjustments
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .login-card {
+        min-height: 120px;
+        padding: 1rem;
+    }
+
+    .login-card .avatar-emoji {
+        font-size: 2.5rem;
+    }
+
+    .app-content-header h3 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}

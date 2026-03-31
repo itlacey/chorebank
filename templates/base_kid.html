@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block header_right %}
+<li class="nav-item">
+    <span class="nav-link">
+        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-2 fs-6">
+            &#x23F0; 0 min
+        </span>
+    </span>
+</li>
+{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a href="/kid/" class="nav-link {% block nav_home_active %}{% endblock %}">
+        <i class="nav-icon bi bi-house"></i>
+        <p>Home</p>
+    </a>
+</li>
+<li class="nav-item">
+    <a href="/kid/chores/" class="nav-link {% block nav_chores_active %}{% endblock %}">
+        <i class="nav-icon bi bi-check2-square"></i>
+        <p>My Chores</p>
+    </a>
+</li>
+<li class="nav-item">
+    <a href="/kid/timer/" class="nav-link {% block nav_timer_active %}{% endblock %}">
+        <i class="nav-icon bi bi-stopwatch"></i>
+        <p>Timer</p>
+    </a>
+</li>
+{% endblock %}

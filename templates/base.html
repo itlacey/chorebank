@@ -1,0 +1,124 @@
+{% load static django_htmx %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}ChoreBank{% endblock %}</title>
+
+    <!-- Google Fonts: Nunito -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- OverlayScrollbars CSS (required by AdminLTE 4 sidebar) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.10.1/styles/overlayscrollbars.min.css">
+
+    <!-- AdminLTE 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/css/adminlte.min.css">
+
+    <!-- ChoreBank pastel overrides -->
+    <link rel="stylesheet" href="{% static 'css/chorebank.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="layout-fixed sidebar-expand-lg">
+
+<div class="app-wrapper">
+
+    <!-- ================================================================== -->
+    <!-- Header                                                              -->
+    <!-- ================================================================== -->
+    <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+            <!-- Left: sidebar toggle + brand -->
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                        <i class="bi bi-list"></i>
+                    </a>
+                </li>
+                <li class="nav-item d-none d-md-block">
+                    <a href="/" class="nav-link fw-bold">
+                        <span class="me-1">&#x1F3E6;</span> ChoreBank
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Right: role-specific content (balance, user info) -->
+            <ul class="navbar-nav ms-auto">
+                {% block header_right %}{% endblock %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- ================================================================== -->
+    <!-- Sidebar                                                             -->
+    <!-- ================================================================== -->
+    <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="light">
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <a href="/" class="brand-link">
+                <span class="brand-text fw-bold">
+                    <span class="me-1">&#x1F3E6;</span> ChoreBank
+                </span>
+            </a>
+        </div>
+
+        <!-- Navigation -->
+        <div class="sidebar-wrapper">
+            <nav class="mt-2">
+                <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
+                    {% block sidebar_nav %}{% endblock %}
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- ================================================================== -->
+    <!-- Main content                                                        -->
+    <!-- ================================================================== -->
+    <main class="app-main">
+        <!-- Page header -->
+        {% block page_header %}
+        <div class="app-content-header">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <h3 class="mb-0">{% block page_title %}{% endblock %}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+
+        <!-- Page content -->
+        <div class="app-content">
+            <div class="container-fluid">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </main>
+
+</div>
+<!-- /.app-wrapper -->
+
+<!-- OverlayScrollbars JS (required by AdminLTE 4 sidebar) -->
+<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.10.1/browser/overlayscrollbars.browser.es6.min.js"></script>
+
+<!-- AdminLTE 4 JS -->
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/js/adminlte.min.js"></script>
+
+<!-- HTMX -->
+{% django_htmx_script %}
+
+<!-- ChoreBank JS -->
+<script src="{% static 'js/chorebank.js' %}"></script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>
