@@ -1,17 +1,22 @@
-"""Core views for ChoreBank authentication.
+"""Core views for ChoreBank.
 
-LoginView       -- Card-picker login with emoji avatars + 4-digit PIN
-LogoutView      -- POST-only logout (CSRF-safe)
-PinChangeView   -- Logged-in user changes their own PIN
-PinResetView    -- Parent resets a kid's PIN
+LoginView        -- Card-picker login with emoji avatars + 4-digit PIN
+LogoutView       -- POST-only logout (CSRF-safe)
+PinChangeView    -- Logged-in user changes their own PIN
+PinResetView     -- Parent resets a kid's PIN
+HomeRouterView   -- Redirect authenticated users to role-appropriate home
+KidHomeView      -- Kid landing page with greeting and balance
+ParentHomeView   -- Parent landing page with kid overview cards
 """
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
+from django.views.generic import TemplateView
 
-from core.mixins import ParentRequiredMixin
+from core.mixins import KidRequiredMixin, ParentRequiredMixin
 from core.models import User
 from core.validators import PinValidator
 
@@ -44,8 +49,8 @@ class LoginView(View):
     def _redirect_home(user):
         """Redirect to role-appropriate home page."""
         if user.is_parent:
-            return redirect("/parent/")
-        return redirect("/kid/")
+            return redirect("parent_home")
+        return redirect("kid_home")
 
 
 class LogoutView(View):
@@ -136,3 +141,51 @@ class PinResetView(ParentRequiredMixin, View):
         kid.save()
         messages.success(request, f"{kid.first_name}'s PIN has been reset!")
         return redirect("pin_reset")
+
+
+# ---------------------------------------------------------------------------
+# Home / Landing pages
+# ---------------------------------------------------------------------------
+
+
+class HomeRouterView(LoginRequiredMixin, View):
+    """Redirect authenticated users to their role-appropriate home page."""
+
+    def get(self, request):
+        if request.user.is_parent:
+            return redirect("parent_home")
+        return redirect("kid_home")
+
+
+class KidHomeView(KidRequiredMixin, TemplateView):
+    """Kid landing page -- personalized greeting and balance placeholder."""
+
+    template_name = "core/kid_home.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        user = self.request.user
+        ctx["first_name"] = user.first_name
+        ctx["emoji_avatar"] = user.emoji_avatar
+        ctx["balance"] = 0
+        return ctx
+
+
+class ParentHomeView(ParentRequiredMixin, TemplateView):
+    """Parent landing page -- overview of all kids with placeholder balances."""
+
+    template_name = "core/parent_home.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
+        ctx["kids"] = [
+            {
+                "first_name": kid.first_name,
+                "emoji_avatar": kid.emoji_avatar,
+                "balance": 0,
+                "user": kid,
+            }
+            for kid in kids
+        ]
+        return ctx

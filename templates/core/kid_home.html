@@ -1,0 +1,55 @@
+{% extends "base_kid.html" %}
+{% load core_tags %}
+
+{% block title %}Home - ChoreBank{% endblock %}
+
+{% block nav_home_active %}active{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+    <div class="col-lg-8">
+
+        <!-- Greeting -->
+        <div class="text-center mb-4">
+            <div style="font-size: 4rem; line-height: 1;">{{ emoji_avatar }}</div>
+            <h2 class="mt-2 fw-bold" style="color: var(--cb-kid-accent, #B19CD9);">
+                Hey {{ first_name }}!
+            </h2>
+            <p class="text-secondary fs-5">Ready to earn some time? &#x1F3AE;</p>
+        </div>
+
+        <!-- Balance card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body text-center py-4">
+                <p class="text-secondary mb-1">Your Time Bank</p>
+                <h1 class="display-4 fw-bold" style="color: var(--cb-kid-accent, #B19CD9);">
+                    &#x23F0; {{ balance }} min
+                </h1>
+            </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="row g-3">
+            <div class="col-6">
+                <a href="/kid/chores/" class="card shadow-sm border-0 text-decoration-none h-100">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-check2-square fs-1" style="color: var(--cb-kid-accent, #B19CD9);"></i>
+                        <h5 class="mt-2 mb-0 text-body">My Chores</h5>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="/kid/timer/" class="card shadow-sm border-0 text-decoration-none h-100">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-stopwatch fs-1" style="color: var(--cb-kid-accent, #B19CD9);"></i>
+                        <h5 class="mt-2 mb-0 text-body">Start Timer</h5>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
