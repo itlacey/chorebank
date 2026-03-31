@@ -96,10 +96,15 @@ DATABASES = {
 # ---------------------------------------------------------------------------
 AUTH_USER_MODEL = "core.User"
 
-# Empty for now -- Plan 02 adds PinValidator
-AUTH_PASSWORD_VALIDATORS = []
+AUTHENTICATION_BACKENDS = ["core.backends.PinAuthBackend"]
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "core.validators.PinValidator"},
+]
 
 LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 # ---------------------------------------------------------------------------
 # Internationalization
