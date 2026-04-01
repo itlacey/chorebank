@@ -12,8 +12,11 @@ ParentChoreCreateView  -- Create a new chore
 ParentChoreEditView    -- Edit an existing chore (regenerates instances)
 ParentChoreDeleteView  -- Soft-delete a chore
 ChoreTemplateLoadView  -- JSON endpoint for template picker
+KidChoreListView       -- Kid chore list grouped by time of day
+CompleteChoreView      -- HTMX one-tap chore completion
 """
 
+from collections import OrderedDict
 from datetime import timedelta
 
 from django.contrib import messages
@@ -21,13 +24,14 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.timezone import localdate
 from django.views import View
 from django.views.generic import TemplateView
 
 from core.forms import ChoreForm
 from core.mixins import KidRequiredMixin, ParentRequiredMixin
-from core.models import Chore, ChoreTemplate, User
+from core.models import Chore, ChoreInstance, ChoreTemplate, User
 from core.tasks import generate_chore_instances
 from core.validators import PinValidator
 
@@ -325,3 +329,87 @@ class ChoreTemplateLoadView(ParentRequiredMixin, View):
             "penalty_minutes": template.suggested_penalty_minutes,
             "time_of_day": template.suggested_time_of_day,
         })
+
+
+# ---------------------------------------------------------------------------
+# Kid Chore Views
+# ---------------------------------------------------------------------------
+
+
+class KidChoreListView(KidRequiredMixin, TemplateView):
+    """Kid chore list grouped by Morning / Afternoon / Evening with upcoming."""
+
+    template_name = "core/kid_chore_list.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        today = localdate()
+        user = self.request.user
+
+        # Today's chores grouped by time of day
+        todays = (
+            ChoreInstance.objects.filter(
+                assigned_to=user,
+                due_date=today,
+            )
+            .select_related("chore")
+            .order_by("chore__time_of_day", "chore__deadline_time")
+        )
+
+        morning_chores = []
+        afternoon_chores = []
+        evening_chores = []
+        for inst in todays:
+            tod = inst.chore.time_of_day
+            if tod == Chore.TimeOfDay.MORNING:
+                morning_chores.append(inst)
+            elif tod == Chore.TimeOfDay.AFTERNOON:
+                afternoon_chores.append(inst)
+            else:
+                evening_chores.append(inst)
+
+        # Upcoming chores: next 7 days (excluding today)
+        upcoming_qs = (
+            ChoreInstance.objects.filter(
+                assigned_to=user,
+                due_date__gt=today,
+                due_date__lte=today + timedelta(days=7),
+            )
+            .select_related("chore")
+            .order_by("due_date", "chore__time_of_day", "chore__deadline_time")
+        )
+
+        # Group upcoming by date (OrderedDict preserves insertion order)
+        upcoming_by_date = OrderedDict()
+        for inst in upcoming_qs:
+            upcoming_by_date.setdefault(inst.due_date, []).append(inst)
+
+        ctx.update({
+            "today": today,
+            "morning_chores": morning_chores,
+            "afternoon_chores": afternoon_chores,
+            "evening_chores": evening_chores,
+            "upcoming_by_date": upcoming_by_date,
+        })
+        return ctx
+
+
+class CompleteChoreView(KidRequiredMixin, View):
+    """One-tap HTMX chore completion. Returns partial for swap."""
+
+    def post(self, request, instance_id):
+        instance = get_object_or_404(
+            ChoreInstance,
+            pk=instance_id,
+            assigned_to=request.user,
+            completed=False,
+        )
+        instance.completed = True
+        instance.completed_at = timezone.now()
+        instance.save()
+
+        response = render(
+            request, "core/_chore_item.html", {"instance": instance}
+        )
+        response["HX-Trigger"] = "chore-completed"
+        return response

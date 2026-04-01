@@ -12,13 +12,13 @@
 
 {% block sidebar_nav %}
 <li class="nav-item">
-    <a href="/kid/" class="nav-link {% block nav_home_active %}{% endblock %}">
+    <a href="{% url 'kid_home' %}" class="nav-link {% block nav_home_active %}{% endblock %}">
         <i class="nav-icon bi bi-house"></i>
         <p>Home</p>
     </a>
 </li>
 <li class="nav-item">
-    <a href="/kid/chores/" class="nav-link {% block nav_chores_active %}{% endblock %}">
+    <a href="{% url 'kid_chore_list' %}" class="nav-link {% block nav_chores_active %}{% endblock %}">
         <i class="nav-icon bi bi-check2-square"></i>
         <p>My Chores</p>
     </a>
