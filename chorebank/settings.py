@@ -35,6 +35,7 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 INSTALLED_APPS = [
     "core",
     "django_htmx",
+    "django_q",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -134,3 +135,15 @@ STORAGES = {
 # Misc
 # ---------------------------------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# Django Q2 (task queue with ORM broker)
+# ---------------------------------------------------------------------------
+Q_CLUSTER = {
+    "name": "chorebank",
+    "workers": 2,
+    "timeout": 120,
+    "retry": 180,
+    "queue_limit": 50,
+    "orm": "default",
+}
