@@ -1,0 +1,303 @@
+{% extends "base_parent.html" %}
+
+{% block title %}{% if editing %}Edit Chore{% else %}Create Chore{% endif %} - ChoreBank{% endblock %}
+
+{% block nav_chores_active %}active{% endblock %}
+
+{% block page_title %}{% if editing %}Edit Chore{% else %}Create Chore{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <!-- Template picker -->
+        {% if not editing %}
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+                <h6 class="card-title mb-2">Start from a template</h6>
+                <div class="input-group">
+                    <select id="template-select" class="form-select">
+                        <option value="">-- Pick a template --</option>
+                        {% for tpl in templates_list %}
+                        <option value="{{ tpl.pk }}">{{ tpl.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" id="load-template-btn" class="btn btn-outline-primary">
+                        Load Template
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Chore form -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Non-field errors -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Row 1: Name -->
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">Chore Name</label>
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}"
+                               value="{{ form.name.value|default_if_none:'' }}"
+                               class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                               placeholder="e.g., Make Your Bed">
+                        {% for error in form.name.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Row 2: Chore Type (radio) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">Chore Type</label>
+                        {% for radio in form.chore_type %}
+                        <div class="form-check form-check-inline">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.chore_type.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Row 3: Reward + Penalty (side by side) -->
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <label for="{{ form.reward_minutes.id_for_label }}" class="form-label fw-semibold">Reward (minutes)</label>
+                            <input type="number" name="reward_minutes" id="{{ form.reward_minutes.id_for_label }}"
+                                   value="{{ form.reward_minutes.value|default_if_none:'' }}"
+                                   class="form-control {% if form.reward_minutes.errors %}is-invalid{% endif %}"
+                                   min="0">
+                            {% for error in form.reward_minutes.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-sm-6" id="penalty-group">
+                            <label for="{{ form.penalty_minutes.id_for_label }}" class="form-label fw-semibold">Penalty (minutes)</label>
+                            <input type="number" name="penalty_minutes" id="{{ form.penalty_minutes.id_for_label }}"
+                                   value="{{ form.penalty_minutes.value|default_if_none:'' }}"
+                                   class="form-control {% if form.penalty_minutes.errors %}is-invalid{% endif %}"
+                                   min="0">
+                            {% for error in form.penalty_minutes.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Time of Day + Deadline -->
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <label for="{{ form.time_of_day.id_for_label }}" class="form-label fw-semibold">Time of Day</label>
+                            <select name="time_of_day" id="{{ form.time_of_day.id_for_label }}"
+                                    class="form-select {% if form.time_of_day.errors %}is-invalid{% endif %}">
+                                <option value="">-- Select --</option>
+                                {% for val, label in form.fields.time_of_day.choices %}
+                                {% if val %}
+                                <option value="{{ val }}" {% if form.time_of_day.value == val %}selected{% endif %}>{{ label }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% for error in form.time_of_day.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="{{ form.deadline_time.id_for_label }}" class="form-label fw-semibold">Deadline Time</label>
+                            <input type="time" name="deadline_time" id="{{ form.deadline_time.id_for_label }}"
+                                   value="{{ form.deadline_time.value|default_if_none:'' }}"
+                                   class="form-control {% if form.deadline_time.errors %}is-invalid{% endif %}">
+                            {% for error in form.deadline_time.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Row 5: Assigned To (checkboxes) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">Assign To</label>
+                        {% for checkbox in form.assigned_to %}
+                        <div class="form-check form-check-inline">
+                            {{ checkbox.tag }}
+                            <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.assigned_to.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Row 6: Recurrence Type (radio) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">Recurrence</label>
+                        {% for radio in form.recurrence_type %}
+                        <div class="form-check form-check-inline">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.recurrence_type.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Row 7: Recurrence-specific sub-fields -->
+
+                    <!-- Weekly: weekday checkboxes -->
+                    <div class="mb-3" id="weekday-group" style="display: none;">
+                        <label class="form-label fw-semibold d-block">Days of the Week</label>
+                        {% with days="0:Mon,1:Tue,2:Wed,3:Thu,4:Fri,5:Sat,6:Sun" %}
+                        {% for day_pair in days|cut:" " %}
+                        {% with day_val=day_pair|truncatechars_html:1 day_label=day_pair|slice:"2:" %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input weekday-check" type="checkbox"
+                                   value="{{ day_pair|slice:':1' }}" id="weekday-{{ day_pair|slice:':1' }}">
+                            <label class="form-check-label" for="weekday-{{ day_pair|slice:':1' }}">{{ day_pair|slice:'2:' }}</label>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                        {% endwith %}
+                        <input type="hidden" name="recurrence_days" id="id_recurrence_days"
+                               value="{{ form.recurrence_days.value|default_if_none:'' }}">
+                        {% for error in form.recurrence_days.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Custom: interval -->
+                    <div class="mb-3" id="interval-group" style="display: none;">
+                        <label for="{{ form.recurrence_interval.id_for_label }}" class="form-label fw-semibold">Repeat every N days</label>
+                        <input type="number" name="recurrence_interval" id="{{ form.recurrence_interval.id_for_label }}"
+                               value="{{ form.recurrence_interval.value|default_if_none:'' }}"
+                               class="form-control {% if form.recurrence_interval.errors %}is-invalid{% endif %}"
+                               min="1" style="max-width: 200px;">
+                        {% for error in form.recurrence_interval.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- One-off: date picker -->
+                    <div class="mb-3" id="oneoff-group" style="display: none;">
+                        <label for="{{ form.one_off_date.id_for_label }}" class="form-label fw-semibold">Date</label>
+                        <input type="date" name="one_off_date" id="{{ form.one_off_date.id_for_label }}"
+                               value="{{ form.one_off_date.value|default_if_none:'' }}"
+                               class="form-control {% if form.one_off_date.errors %}is-invalid{% endif %}"
+                               style="max-width: 200px;">
+                        {% for error in form.one_off_date.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Save Chore
+                        </button>
+                        <a href="{% url 'chore_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ----- 1. Toggle penalty-group visibility by chore_type -----
+    const choreTypeRadios = document.querySelectorAll('input[name="chore_type"]');
+    const penaltyGroup = document.getElementById('penalty-group');
+
+    function togglePenalty() {
+        const selected = document.querySelector('input[name="chore_type"]:checked');
+        if (selected && selected.value === 'bonus') {
+            penaltyGroup.style.display = 'none';
+        } else {
+            penaltyGroup.style.display = '';
+        }
+    }
+    choreTypeRadios.forEach(r => r.addEventListener('change', togglePenalty));
+    togglePenalty();
+
+    // ----- 2. Toggle recurrence sub-fields -----
+    const recurrenceRadios = document.querySelectorAll('input[name="recurrence_type"]');
+    const weekdayGroup = document.getElementById('weekday-group');
+    const intervalGroup = document.getElementById('interval-group');
+    const oneoffGroup = document.getElementById('oneoff-group');
+
+    function toggleRecurrence() {
+        const selected = document.querySelector('input[name="recurrence_type"]:checked');
+        const val = selected ? selected.value : '';
+        weekdayGroup.style.display = (val === 'weekly') ? '' : 'none';
+        intervalGroup.style.display = (val === 'custom') ? '' : 'none';
+        oneoffGroup.style.display = (val === 'once') ? '' : 'none';
+    }
+    recurrenceRadios.forEach(r => r.addEventListener('change', toggleRecurrence));
+    toggleRecurrence();
+
+    // ----- 3. Weekday checkboxes -> hidden recurrence_days field -----
+    const weekdayChecks = document.querySelectorAll('.weekday-check');
+    const recurrenceDaysInput = document.getElementById('id_recurrence_days');
+
+    function syncWeekdays() {
+        const checked = [];
+        weekdayChecks.forEach(cb => {
+            if (cb.checked) checked.push(cb.value);
+        });
+        recurrenceDaysInput.value = checked.join(',');
+    }
+    weekdayChecks.forEach(cb => cb.addEventListener('change', syncWeekdays));
+
+    // On load: check boxes from existing value
+    if (recurrenceDaysInput.value) {
+        const existing = recurrenceDaysInput.value.split(',');
+        weekdayChecks.forEach(cb => {
+            if (existing.includes(cb.value)) cb.checked = true;
+        });
+    }
+
+    // ----- 4. Template loader -----
+    const templateSelect = document.getElementById('template-select');
+    const loadTemplateBtn = document.getElementById('load-template-btn');
+
+    if (loadTemplateBtn) {
+        loadTemplateBtn.addEventListener('click', function() {
+            const templateId = templateSelect.value;
+            if (!templateId) return;
+
+            fetch('{% url "chore_load_template" %}?template_id=' + templateId)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) return;
+                    // Fill form fields
+                    document.getElementById('{{ form.name.id_for_label }}').value = data.name || '';
+                    document.getElementById('{{ form.reward_minutes.id_for_label }}').value = data.reward_minutes || '';
+                    document.getElementById('{{ form.penalty_minutes.id_for_label }}').value = data.penalty_minutes || '';
+
+                    // Set chore_type radio
+                    choreTypeRadios.forEach(r => {
+                        r.checked = (r.value === data.chore_type);
+                    });
+                    togglePenalty();
+
+                    // Set time_of_day select
+                    const todSelect = document.getElementById('{{ form.time_of_day.id_for_label }}');
+                    if (todSelect) todSelect.value = data.time_of_day || '';
+                });
+        });
+    }
+})();
+</script>
+{% endblock %}

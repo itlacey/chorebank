@@ -1,0 +1,97 @@
+{% extends "base_parent.html" %}
+
+{% block title %}Manage Chores - ChoreBank{% endblock %}
+
+{% block nav_chores_active %}active{% endblock %}
+
+{% block page_title %}Manage Chores{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+
+        <!-- Action bar -->
+        <div class="mb-3 d-flex justify-content-end">
+            <a href="{% url 'chore_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Create New Chore
+            </a>
+        </div>
+
+        <!-- Chores table -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                {% if chores %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Reward</th>
+                                <th>Penalty</th>
+                                <th>Schedule</th>
+                                <th>Assigned To</th>
+                                <th>Time of Day</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for chore in chores %}
+                            <tr>
+                                <td class="fw-semibold">{{ chore.name }}</td>
+                                <td>
+                                    {% if chore.chore_type == "bonus" %}
+                                    <span class="badge bg-success-subtle text-success-emphasis">Bonus</span>
+                                    {% else %}
+                                    <span class="badge bg-primary-subtle text-primary-emphasis">Required</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ chore.reward_minutes }} min</td>
+                                <td>
+                                    {% if chore.penalty_minutes %}
+                                    {{ chore.penalty_minutes }} min
+                                    {% else %}
+                                    &mdash;
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if chore.recurrence_type == "daily" %}Daily
+                                    {% elif chore.recurrence_type == "weekly" %}Weekly
+                                    {% elif chore.recurrence_type == "custom" %}Every {{ chore.recurrence_interval }} days
+                                    {% elif chore.recurrence_type == "once" %}One-off ({{ chore.one_off_date }})
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for kid in chore.assigned_to.all %}
+                                    {{ kid.first_name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>{{ chore.get_time_of_day_display }}</td>
+                                <td class="text-end text-nowrap">
+                                    <a href="{% url 'chore_edit' chore.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'chore_delete' chore.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-secondary">
+                    <i class="bi bi-check2-square fs-1 d-block mb-2"></i>
+                    <p class="mb-2">No chores set up yet.</p>
+                    <a href="{% url 'chore_create' %}" class="btn btn-primary btn-sm">
+                        Create your first chore!
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

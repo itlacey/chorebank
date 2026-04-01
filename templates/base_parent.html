@@ -2,15 +2,15 @@
 
 {% block sidebar_nav %}
 <li class="nav-item">
-    <a href="/parent/" class="nav-link {% block nav_home_active %}{% endblock %}">
+    <a href="{% url 'parent_home' %}" class="nav-link {% block nav_home_active %}{% endblock %}">
         <i class="nav-icon bi bi-house"></i>
         <p>Home</p>
     </a>
 </li>
 <li class="nav-item">
-    <a href="/parent/chores/" class="nav-link {% block nav_chores_active %}{% endblock %}">
+    <a href="{% url 'chore_list' %}" class="nav-link {% block nav_chores_active %}{% endblock %}">
         <i class="nav-icon bi bi-check2-square"></i>
-        <p>Chores</p>
+        <p>Manage Chores</p>
     </a>
 </li>
 <li class="nav-item">
