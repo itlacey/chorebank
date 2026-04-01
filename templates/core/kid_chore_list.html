@@ -1,0 +1,133 @@
+{% extends "base_kid.html" %}
+
+{% block nav_chores_active %}active{% endblock %}
+
+{% block page_title %}My Chores{% endblock %}
+
+{% block extra_css %}
+<style>
+.chore-item.completed {
+    opacity: 0.6;
+}
+.chore-item.completed .chore-name {
+    text-decoration: line-through;
+}
+.time-group-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.5rem;
+}
+.upcoming-item {
+    opacity: 0.75;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- Today's Chores                                                -->
+<!-- ============================================================ -->
+
+{% if morning_chores or afternoon_chores or evening_chores %}
+
+    {% if morning_chores %}
+    <div class="mb-4">
+        <div class="time-group-header">
+            <i class="bi bi-sunrise text-warning me-1"></i> Morning
+        </div>
+        {% for instance in morning_chores %}
+            {% include "core/_chore_item.html" with instance=instance %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if afternoon_chores %}
+    <div class="mb-4">
+        <div class="time-group-header">
+            <i class="bi bi-sun text-warning me-1"></i> Afternoon
+        </div>
+        {% for instance in afternoon_chores %}
+            {% include "core/_chore_item.html" with instance=instance %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if evening_chores %}
+    <div class="mb-4">
+        <div class="time-group-header">
+            <i class="bi bi-moon-stars text-info me-1"></i> Evening
+        </div>
+        {% for instance in evening_chores %}
+            {% include "core/_chore_item.html" with instance=instance %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+{% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-emoji-sunglasses fs-1 d-block mb-2"></i>
+        <p class="fs-5">No chores for today! Enjoy your free time.</p>
+    </div>
+{% endif %}
+
+<!-- ============================================================ -->
+<!-- Upcoming Chores (next 7 days)                                 -->
+<!-- ============================================================ -->
+
+{% if upcoming_by_date %}
+<hr class="my-4">
+<h5 class="text-muted mb-3"><i class="bi bi-calendar-week me-1"></i> Coming Up</h5>
+
+{% for date, instances in upcoming_by_date.items %}
+<div class="mb-3">
+    <div class="fw-semibold text-secondary mb-1">
+        {% if date == tomorrow %}
+            Tomorrow
+        {% else %}
+            {{ date|date:"l, M j" }}
+        {% endif %}
+    </div>
+    {% for instance in instances %}
+    <div class="upcoming-item card mb-1">
+        <div class="card-body d-flex align-items-center py-2 px-3">
+            <div class="flex-grow-1">
+                <span class="fw-semibold">{{ instance.chore.name }}</span>
+            </div>
+            <div>
+                <span class="badge bg-light text-secondary">
+                    {{ instance.chore.get_time_of_day_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% else %}
+    {% if morning_chores or afternoon_chores or evening_chores %}
+    <hr class="my-4">
+    <div class="text-center py-3 text-muted">
+        <p>Nothing else this week!</p>
+    </div>
+    {% endif %}
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+<script>
+document.body.addEventListener("chore-completed", function() {
+    confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#B19CD9", "#8BC6A8", "#F2D07A", "#89C4D8", "#F4A7BB"],
+        disableForReducedMotion: true,
+    });
+});
+</script>
+{% endblock %}

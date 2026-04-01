@@ -1,0 +1,41 @@
+<div id="chore-{{ instance.id }}" class="chore-item card mb-2{% if instance.completed %} completed{% endif %}">
+    <div class="card-body d-flex align-items-center py-2 px-3">
+        <!-- Left: Done button or checkmark -->
+        <div class="me-3">
+            {% if instance.completed %}
+                <span class="text-success fs-4"><i class="bi bi-check-circle-fill"></i></span>
+            {% else %}
+                <button
+                    hx-post="{% url 'complete_chore' instance.id %}"
+                    hx-target="#chore-{{ instance.id }}"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this"
+                    class="btn btn-success btn-sm rounded-pill"
+                >
+                    Done!
+                </button>
+            {% endif %}
+        </div>
+
+        <!-- Center: Chore name + deadline -->
+        <div class="flex-grow-1">
+            <span class="chore-name{% if instance.completed %} text-decoration-line-through text-muted{% endif %} fw-semibold">
+                {{ instance.chore.name }}
+            </span>
+            <br>
+            <small class="text-muted">by {{ instance.chore.deadline_time|time:"g:i A" }}</small>
+        </div>
+
+        <!-- Right: Impact preview badges -->
+        <div class="text-end">
+            {% if instance.completed %}
+                <span class="badge bg-success-subtle text-success">+{{ instance.chore.reward_minutes }} min earned</span>
+            {% elif instance.chore.chore_type == "bonus" %}
+                <span class="badge bg-success-subtle text-success">+{{ instance.chore.reward_minutes }} min</span>
+            {% else %}
+                <span class="badge bg-info-subtle text-info">+{{ instance.chore.reward_minutes }} min</span>
+                <span class="badge bg-danger-subtle text-danger">-{{ instance.chore.penalty_minutes }} min if missed</span>
+            {% endif %}
+        </div>
+    </div>
+</div>

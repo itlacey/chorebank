@@ -386,6 +386,7 @@ class KidChoreListView(KidRequiredMixin, TemplateView):
 
         ctx.update({
             "today": today,
+            "tomorrow": today + timedelta(days=1),
             "morning_chores": morning_chores,
             "afternoon_chores": afternoon_chores,
             "evening_chores": evening_chores,
