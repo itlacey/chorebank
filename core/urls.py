@@ -17,6 +17,9 @@ from core.views import (
     ParentHomeView,
     PinChangeView,
     PinResetView,
+    TimerPageView,
+    TimerStartView,
+    TimerStopView,
 )
 
 urlpatterns = [
@@ -39,4 +42,8 @@ urlpatterns = [
     # Kid chore views
     path("kid/chores/", KidChoreListView.as_view(), name="kid_chore_list"),
     path("kid/chores/<int:instance_id>/complete/", CompleteChoreView.as_view(), name="complete_chore"),
+    # Timer
+    path("kid/timer/", TimerPageView.as_view(), name="kid_timer"),
+    path("kid/timer/start/", TimerStartView.as_view(), name="timer_start"),
+    path("kid/timer/stop/", TimerStopView.as_view(), name="timer_stop"),
 ]

@@ -14,14 +14,20 @@ ParentChoreDeleteView  -- Soft-delete a chore
 ChoreTemplateLoadView  -- JSON endpoint for template picker
 KidChoreListView       -- Kid chore list grouped by time of day
 CompleteChoreView      -- HTMX one-tap chore completion
+TimerPageView          -- Timer page with setup/resume state
+TimerStartView         -- Start timer session with optimistic SPEND
+TimerStopView          -- Stop timer session with ADJUST refund
 """
 
 from collections import OrderedDict
 from datetime import timedelta
 
+import json
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -31,7 +37,15 @@ from django.views.generic import TemplateView
 
 from core.forms import ChoreForm
 from core.mixins import KidRequiredMixin, ParentRequiredMixin
-from core.models import Chore, ChoreInstance, ChoreTemplate, TimeBankTransaction, User, format_balance
+from core.models import (
+    Chore,
+    ChoreInstance,
+    ChoreTemplate,
+    TimeBankTransaction,
+    TimerSession,
+    User,
+    format_balance,
+)
 from core.tasks import generate_chore_instances
 from core.validators import PinValidator
 
@@ -427,3 +441,148 @@ class CompleteChoreView(KidRequiredMixin, View):
         )
         response["HX-Trigger"] = "chore-completed"
         return response
+
+
+# ---------------------------------------------------------------------------
+# Timer Views
+# ---------------------------------------------------------------------------
+
+
+class TimerPageView(KidRequiredMixin, TemplateView):
+    """Timer page with setup state and active-session resume."""
+
+    template_name = "core/timer.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        user = self.request.user
+        now = timezone.now()
+
+        # Auto-close stale sessions (past expected end, still open)
+        stale_sessions = TimerSession.objects.filter(
+            kid=user, ended_at__isnull=True
+        )
+        for session in stale_sessions:
+            expected_end = session.started_at + timedelta(
+                minutes=session.requested_minutes
+            )
+            if expected_end < now:
+                session.ended_at = expected_end
+                session.ended_reason = "timer_expired"
+                session.save()
+
+        # Check for an active session (still running)
+        active_session = (
+            TimerSession.objects.filter(kid=user, ended_at__isnull=True)
+            .first()
+        )
+        if active_session:
+            expected_end = active_session.started_at + timedelta(
+                minutes=active_session.requested_minutes
+            )
+            if expected_end > now:
+                ctx["active_session"] = active_session
+                ctx["active_session_end_time_ms"] = int(
+                    expected_end.timestamp() * 1000
+                )
+
+        balance = TimeBankTransaction.get_balance(user)
+        ctx["balance"] = balance
+        ctx["balance_display"] = format_balance(balance)
+        return ctx
+
+
+class TimerStartView(KidRequiredMixin, View):
+    """Start a timer session with optimistic SPEND transaction."""
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            minutes = int(data.get("minutes", 0))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return JsonResponse({"error": "Invalid request"}, status=400)
+
+        if minutes < 1 or minutes > 480:
+            return JsonResponse(
+                {"error": "Minutes must be between 1 and 480"}, status=400
+            )
+
+        with transaction.atomic():
+            balance = TimeBankTransaction.get_balance(request.user)
+            if balance <= 0 or balance < minutes:
+                return JsonResponse(
+                    {"error": "Not enough balance"}, status=400
+                )
+
+            # Prevent double-start
+            if TimerSession.objects.filter(
+                kid=request.user, ended_at__isnull=True
+            ).exists():
+                return JsonResponse(
+                    {"error": "Timer already running"}, status=400
+                )
+
+            # Optimistic SPEND deduction
+            spend_txn = TimeBankTransaction.objects.create(
+                kid=request.user,
+                transaction_type="spend",
+                amount=-minutes,
+                note=f"Timer: {minutes}m session",
+                created_by=request.user,
+            )
+
+            now = timezone.now()
+            session = TimerSession.objects.create(
+                kid=request.user,
+                requested_minutes=minutes,
+                started_at=now,
+                spend_transaction=spend_txn,
+            )
+
+            end_time_ms = int(
+                (now + timedelta(minutes=minutes)).timestamp() * 1000
+            )
+            new_balance = TimeBankTransaction.get_balance(request.user)
+
+        return JsonResponse({
+            "ok": True,
+            "session_id": session.pk,
+            "end_time_ms": end_time_ms,
+            "balance": new_balance,
+            "balance_display": format_balance(new_balance),
+        })
+
+
+class TimerStopView(KidRequiredMixin, View):
+    """Stop an active timer session and refund unused time."""
+
+    def post(self, request):
+        session = get_object_or_404(
+            TimerSession, kid=request.user, ended_at__isnull=True
+        )
+
+        session.ended_at = timezone.now()
+        session.ended_reason = "manual"
+        session.save()
+
+        used_seconds = (session.ended_at - session.started_at).total_seconds()
+        used_minutes = int(used_seconds / 60)
+        unused = session.requested_minutes - used_minutes
+
+        if unused > 0:
+            TimeBankTransaction.objects.create(
+                kid=request.user,
+                transaction_type="adjust",
+                amount=unused,
+                note=f"Refund: {unused}m unused from {session.requested_minutes}m session",
+                created_by=request.user,
+            )
+
+        new_balance = TimeBankTransaction.get_balance(request.user)
+        return JsonResponse({
+            "ok": True,
+            "used_minutes": used_minutes,
+            "refunded_minutes": max(0, unused),
+            "balance": new_balance,
+            "balance_display": format_balance(new_balance),
+        })
