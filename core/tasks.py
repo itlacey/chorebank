@@ -4,6 +4,7 @@ generate_chore_instances is scheduled daily via Django Q2 to create
 ChoreInstance records for each active chore and its assigned kids.
 """
 
+import calendar
 from datetime import timedelta
 
 from django.utils.timezone import localdate
@@ -51,6 +52,14 @@ def _is_due_on(chore, target_date):
         # recurrence_days stores "0,2,4" for Mon/Wed/Fri
         due_days = [int(d) for d in chore.recurrence_days.split(",") if d]
         return target_date.weekday() in due_days
+    elif chore.recurrence_type == Chore.RecurrenceType.MONTHLY:
+        # Fire on same day-of-month as creation date.
+        # End-of-month guard: if created on the 31st but target month
+        # only has 28-30 days, fire on the last day of that month.
+        created_day = chore.created_at.day
+        last_day_of_month = calendar.monthrange(target_date.year, target_date.month)[1]
+        target_day = min(created_day, last_day_of_month)
+        return target_date.day == target_day
     elif chore.recurrence_type == Chore.RecurrenceType.CUSTOM:
         # Calculate based on interval from chore creation
         if not chore.recurrence_interval:

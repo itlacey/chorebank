@@ -52,6 +52,7 @@ class Chore(models.Model):
     class RecurrenceType(models.TextChoices):
         DAILY = "daily", "Daily"
         WEEKLY = "weekly", "Weekly"
+        MONTHLY = "monthly", "Monthly"
         CUSTOM = "custom", "Custom"
         ONCE = "once", "Once"
 
