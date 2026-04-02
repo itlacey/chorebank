@@ -1,0 +1,34 @@
+{% load tz %}
+{% for txn in transactions %}
+<tr>
+    <td>
+        {% if txn.transaction_type == "earn" %}
+            <i class="bi bi-plus-circle text-success"></i> Earn
+        {% elif txn.transaction_type == "spend" %}
+            <i class="bi bi-dash-circle text-danger"></i> Spend
+        {% elif txn.transaction_type == "penalty" %}
+            <i class="bi bi-exclamation-triangle text-warning"></i> Penalty
+        {% elif txn.transaction_type == "adjust" %}
+            <i class="bi bi-arrow-left-right text-info"></i> Adjust
+        {% endif %}
+    </td>
+    <td>{{ txn.kid.emoji_avatar }} {{ txn.kid.first_name }}</td>
+    <td class="{% if txn.amount >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+        {% if txn.amount >= 0 %}+{% endif %}{{ txn.amount }}m
+    </td>
+    <td>{{ txn.note }}</td>
+    <td>{{ txn.created_at|date:"M j, g:i A" }}</td>
+</tr>
+{% endfor %}
+{% if has_more %}
+<tr id="load-more-row">
+    <td colspan="5" class="text-center py-3">
+        <button hx-get="{% url 'bank_history' %}?offset={{ next_offset }}{% if kid_id %}&kid={{ kid_id }}{% endif %}"
+                hx-target="#load-more-row"
+                hx-swap="outerHTML"
+                class="btn btn-outline-primary btn-sm">
+            Load More
+        </button>
+    </td>
+</tr>
+{% endif %}

@@ -1,0 +1,55 @@
+{% extends "base_parent.html" %}
+
+{% block nav_bank_history_active %}active{% endblock %}
+
+{% block title %}Bank History{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h3 class="mb-4">Bank History</h3>
+
+    <!-- Kid Filter -->
+    <div class="mb-4">
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label for="kid-filter" class="form-label mb-0 fw-bold">Filter by kid:</label>
+            <select name="kid" id="kid-filter" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
+                <option value="">All Kids</option>
+                {% for kid in kids %}
+                <option value="{{ kid.pk }}" {% if kid_id|stringformat:"s" == kid.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ kid.emoji_avatar }} {{ kid.first_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- Transaction Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Kid</th>
+                            <th>Amount</th>
+                            <th>Note</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-list">
+                        {% include "core/_transaction_rows.html" %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if not transactions %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+                No transactions yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
