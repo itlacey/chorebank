@@ -31,7 +31,7 @@ from django.views.generic import TemplateView
 
 from core.forms import ChoreForm
 from core.mixins import KidRequiredMixin, ParentRequiredMixin
-from core.models import Chore, ChoreInstance, ChoreTemplate, User
+from core.models import Chore, ChoreInstance, ChoreTemplate, TimeBankTransaction, User, format_balance
 from core.tasks import generate_chore_instances
 from core.validators import PinValidator
 
@@ -182,7 +182,8 @@ class KidHomeView(KidRequiredMixin, TemplateView):
         user = self.request.user
         ctx["first_name"] = user.first_name
         ctx["emoji_avatar"] = user.emoji_avatar
-        ctx["balance"] = 0
+        ctx["balance"] = TimeBankTransaction.get_balance(user)
+        ctx["balance_display"] = format_balance(ctx["balance"])
         return ctx
 
 
@@ -198,7 +199,8 @@ class ParentHomeView(ParentRequiredMixin, TemplateView):
             {
                 "first_name": kid.first_name,
                 "emoji_avatar": kid.emoji_avatar,
-                "balance": 0,
+                "balance": TimeBankTransaction.get_balance(kid),
+                "balance_display": format_balance(TimeBankTransaction.get_balance(kid)),
                 "user": kid,
             }
             for kid in kids
@@ -408,6 +410,17 @@ class CompleteChoreView(KidRequiredMixin, View):
         instance.completed = True
         instance.completed_at = timezone.now()
         instance.save()
+
+        # Create EARN transaction for chore completion
+        if instance.chore.reward_minutes > 0:
+            TimeBankTransaction.objects.create(
+                kid=request.user,
+                transaction_type=TimeBankTransaction.TransactionType.EARN,
+                amount=instance.chore.reward_minutes,
+                note=f"Completed: {instance.chore.name}",
+                created_by=request.user,
+                chore_instance=instance,
+            )
 
         response = render(
             request, "core/_chore_item.html", {"instance": instance}

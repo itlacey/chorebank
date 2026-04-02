@@ -1,22 +1,31 @@
 """Custom template tags for ChoreBank.
 
-bank_balance  -- Render a user's time-bank balance (placeholder: 0 min)
+bank_balance  -- Render a user's time-bank balance as a colored badge
 user_avatar   -- Render a user's emoji avatar at a given size
 """
 
 from django import template
 
+from core.models import TimeBankTransaction, format_balance
+
 register = template.Library()
 
 
-@register.simple_tag
+@register.inclusion_tag("core/_balance_badge.html")
 def bank_balance(user):
-    """Return the user's time-bank balance as a formatted string.
+    """Render the user's time-bank balance as a colored badge."""
+    balance = TimeBankTransaction.get_balance(user)
+    display = format_balance(balance)
 
-    Placeholder implementation -- always returns '0 min'.
-    Will be replaced with real balance lookup in Phase 3.
-    """
-    return "0 min"
+    # Color coding: green healthy, orange <15min, red zero/negative
+    if balance <= 0:
+        color_class = "bg-danger-subtle text-danger-emphasis"
+    elif balance < 15:
+        color_class = "bg-warning-subtle text-warning-emphasis"
+    else:
+        color_class = "bg-success-subtle text-success-emphasis"
+
+    return {"display": display, "color_class": color_class, "balance": balance}
 
 
 @register.inclusion_tag("core/_user_avatar.html")
