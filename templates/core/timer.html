@@ -1,0 +1,299 @@
+{% extends "base_kid.html" %}
+
+{% block nav_timer_active %}active{% endblock %}
+
+{% block title %}Timer{% endblock %}
+
+{% block content %}
+<!-- Setup State -->
+<div id="setup-state">
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-body text-center py-5">
+            <h2 class="mb-3">Screen Time Timer</h2>
+            <p class="fs-4 mb-4">
+              You have <strong id="balance-display" class="{% if balance > 0 %}text-success{% elif balance < 15 %}text-warning{% else %}text-danger{% endif %}">{{ balance_display }}</strong> available
+            </p>
+
+            {% if balance <= 0 %}
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              You need to earn more time! Complete some chores.
+            </div>
+            <a href="{% url 'kid_chore_list' %}" class="btn btn-primary btn-lg">
+              <i class="bi bi-check2-square me-2"></i>My Chores
+            </a>
+            {% else %}
+            <!-- Minute Picker -->
+            <div class="mb-4">
+              <label for="minutes-input" class="form-label fs-5">How many minutes?</label>
+              <input type="number" id="minutes-input" class="form-control form-control-lg text-center mx-auto"
+                     style="max-width: 200px; font-size: 1.5rem;"
+                     min="1" max="{{ balance }}" placeholder="0">
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="mb-4" id="presets">
+              {% if balance >= 5 %}
+              <button class="btn btn-outline-primary btn-lg me-2 mb-2" onclick="setMinutes(5)">5m</button>
+              {% endif %}
+              {% if balance >= 10 %}
+              <button class="btn btn-outline-primary btn-lg me-2 mb-2" onclick="setMinutes(10)">10m</button>
+              {% endif %}
+              {% if balance >= 15 %}
+              <button class="btn btn-outline-primary btn-lg me-2 mb-2" onclick="setMinutes(15)">15m</button>
+              {% endif %}
+              {% if balance >= 30 %}
+              <button class="btn btn-outline-primary btn-lg me-2 mb-2" onclick="setMinutes(30)">30m</button>
+              {% endif %}
+              {% if balance >= 60 %}
+              <button class="btn btn-outline-primary btn-lg me-2 mb-2" onclick="setMinutes(60)">60m</button>
+              {% endif %}
+            </div>
+
+            <!-- Start Button -->
+            <button id="start-btn" class="btn btn-success btn-lg px-5 py-3" onclick="startTimer()" disabled>
+              <i class="bi bi-play-fill me-2"></i>Start Timer
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Timer Overlay (hidden by default) -->
+<div class="timer-overlay" style="display: none;">
+  <div class="text-center">
+    <div id="timer-display" style="font-size: 8rem; font-weight: bold; font-family: 'Courier New', monospace; line-height: 1;">
+      00:00
+    </div>
+    <p class="fs-4 mt-3 mb-5" style="opacity: 0.8;">Time remaining</p>
+    <button id="stop-btn" class="btn btn-danger btn-lg px-5 py-3" onclick="stopTimer()">
+      <i class="bi bi-stop-fill me-2"></i>Stop Timer
+    </button>
+  </div>
+</div>
+
+<style>
+  .timer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #C8E6D0;
+    transition: background-color 2s ease;
+    color: #212529;
+  }
+</style>
+
+<script>
+// State
+let endTimeMs = null;
+let timerInterval = null;
+let audioCtx = null;
+let totalMs = null;
+
+// CSRF helper
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
+// Audio init (must be on user gesture)
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+// Alarm: three beeps at 880Hz
+function playAlarm() {
+    if (!audioCtx) return;
+    [0, 0.4, 0.8].forEach(function(delay) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 880;
+        osc.type = "sine";
+        gain.gain.value = 0.3;
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + 0.25);
+    });
+}
+
+// Visual flash on expiry
+function flashScreen() {
+    const overlay = document.querySelector(".timer-overlay");
+    let count = 0;
+    const flash = setInterval(function() {
+        overlay.style.backgroundColor = count % 2 === 0 ? "#F0B4B0" : "#FAF8FC";
+        count++;
+        if (count >= 6) {
+            clearInterval(flash);
+            overlay.style.backgroundColor = "#F0B4B0";
+        }
+    }, 300);
+}
+
+// Color shift based on remaining percentage
+function updateColorShift(remainingMs) {
+    const overlay = document.querySelector(".timer-overlay");
+    const pct = remainingMs / totalMs;
+    if (pct > 0.25) {
+        overlay.style.backgroundColor = "#C8E6D0";  // Calm green
+    } else if (pct > 0.10) {
+        overlay.style.backgroundColor = "#F5D6A8";  // Warning orange
+    } else {
+        overlay.style.backgroundColor = "#F0B4B0";  // Urgent red
+    }
+}
+
+// Display update (runs every second via setInterval)
+function updateDisplay() {
+    const remaining = Math.max(0, endTimeMs - Date.now());
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    document.getElementById("timer-display").textContent =
+        String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+    updateColorShift(remaining);
+    if (remaining <= 0) {
+        clearInterval(timerInterval);
+        onTimerExpired();
+    }
+}
+
+// Timer expired
+function onTimerExpired() {
+    playAlarm();
+    flashScreen();
+    // Auto-stop on server
+    fetch("/kid/timer/stop/", {
+        method: "POST",
+        headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        // Show "Time's Up" message after flash
+        setTimeout(function() {
+            document.getElementById("timer-display").textContent = "00:00";
+            const stopBtn = document.getElementById("stop-btn");
+            stopBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Done';
+            stopBtn.onclick = function() { window.location.reload(); };
+            stopBtn.classList.remove("btn-danger");
+            stopBtn.classList.add("btn-primary");
+        }, 2000);
+    });
+}
+
+// Set minutes from preset button
+function setMinutes(val) {
+    document.getElementById("minutes-input").value = val;
+    document.getElementById("start-btn").disabled = false;
+}
+
+// Start timer
+async function startTimer() {
+    const minutesInput = document.getElementById("minutes-input");
+    const minutes = parseInt(minutesInput.value);
+    if (!minutes || minutes < 1) return;
+
+    initAudio();  // User gesture satisfies autoplay policy
+
+    const startBtn = document.getElementById("start-btn");
+    startBtn.disabled = true;
+    startBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Starting...';
+
+    try {
+        const resp = await fetch("/kid/timer/start/", {
+            method: "POST",
+            headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
+            body: JSON.stringify({minutes: minutes}),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.error || "Could not start timer");
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Timer';
+            return;
+        }
+        // Switch to running state
+        endTimeMs = data.end_time_ms;
+        totalMs = minutes * 60 * 1000;
+        document.getElementById("setup-state").style.display = "none";
+        document.querySelector(".timer-overlay").style.display = "flex";
+        timerInterval = setInterval(updateDisplay, 1000);
+        updateDisplay();
+    } catch (err) {
+        alert("Network error -- try again");
+        startBtn.disabled = false;
+        startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Timer';
+    }
+}
+
+// Stop timer
+async function stopTimer() {
+    clearInterval(timerInterval);
+    const stopBtn = document.getElementById("stop-btn");
+    stopBtn.disabled = true;
+    stopBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Stopping...';
+
+    try {
+        const resp = await fetch("/kid/timer/stop/", {
+            method: "POST",
+            headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            window.location.reload();  // Return to setup state with updated balance
+        }
+    } catch (err) {
+        // Retry on failure
+        stopBtn.disabled = false;
+        stopBtn.innerHTML = '<i class="bi bi-stop-fill me-2"></i>Retry Stop';
+    }
+}
+
+// Enable start button when minutes are entered
+document.addEventListener("DOMContentLoaded", function() {
+    const minutesInput = document.getElementById("minutes-input");
+    if (minutesInput) {
+        minutesInput.addEventListener("input", function() {
+            const val = parseInt(this.value);
+            const startBtn = document.getElementById("start-btn");
+            if (startBtn) {
+                startBtn.disabled = !val || val < 1;
+            }
+        });
+    }
+
+    // Resume active session on page load
+    {% if active_session %}
+    endTimeMs = {{ active_session_end_time_ms }};
+    totalMs = {{ active_session.requested_minutes }} * 60 * 1000;
+    initAudio();
+    document.getElementById("setup-state").style.display = "none";
+    document.querySelector(".timer-overlay").style.display = "flex";
+    timerInterval = setInterval(updateDisplay, 1000);
+    updateDisplay();
+    {% endif %}
+});
+
+// Warn before closing tab during active timer
+window.addEventListener("beforeunload", function(e) {
+    if (timerInterval) {
+        e.preventDefault();
+        e.returnValue = "";
+    }
+});
+</script>
+{% endblock %}
