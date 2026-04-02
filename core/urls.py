@@ -17,9 +17,11 @@ from core.views import (
     ParentHomeView,
     PinChangeView,
     PinResetView,
+    TimeAdjustView,
     TimerPageView,
     TimerStartView,
     TimerStopView,
+    TransactionHistoryView,
 )
 
 urlpatterns = [
@@ -39,6 +41,9 @@ urlpatterns = [
     path("parent/chores/<int:pk>/edit/", ParentChoreEditView.as_view(), name="chore_edit"),
     path("parent/chores/<int:pk>/delete/", ParentChoreDeleteView.as_view(), name="chore_delete"),
     path("parent/chores/load-template/", ChoreTemplateLoadView.as_view(), name="chore_load_template"),
+    # Parent bank management
+    path("parent/bank/adjust/", TimeAdjustView.as_view(), name="bank_adjust"),
+    path("parent/bank/history/", TransactionHistoryView.as_view(), name="bank_history"),
     # Kid chore views
     path("kid/chores/", KidChoreListView.as_view(), name="kid_chore_list"),
     path("kid/chores/<int:instance_id>/complete/", CompleteChoreView.as_view(), name="complete_chore"),

@@ -92,3 +92,32 @@ class ChoreForm(forms.ModelForm):
                 )
 
         return cleaned
+
+
+class TimeAdjustForm(forms.Form):
+    """Form for parent manual time bank adjustments."""
+
+    kid = forms.ModelChoiceField(
+        queryset=User.objects.filter(role=User.Role.KID).order_by("first_name"),
+        widget=forms.Select(attrs={"class": "form-select form-select-lg"}),
+    )
+    amount = forms.IntegerField(
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control form-control-lg",
+                "placeholder": "Minutes",
+                "id": "id_amount",
+            }
+        ),
+        help_text="Positive to add, negative to subtract",
+    )
+    note = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Optional note (e.g., 'Extra chores today')",
+            }
+        ),
+    )

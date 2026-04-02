@@ -17,6 +17,8 @@ CompleteChoreView      -- HTMX one-tap chore completion
 TimerPageView          -- Timer page with setup/resume state
 TimerStartView         -- Start timer session with optimistic SPEND
 TimerStopView          -- Stop timer session with ADJUST refund
+TimeAdjustView         -- Parent manual time bank adjustment
+TransactionHistoryView -- Transaction history with kid filter and HTMX pagination
 """
 
 from collections import OrderedDict
@@ -35,7 +37,7 @@ from django.utils.timezone import localdate
 from django.views import View
 from django.views.generic import TemplateView
 
-from core.forms import ChoreForm
+from core.forms import ChoreForm, TimeAdjustForm
 from core.mixins import KidRequiredMixin, ParentRequiredMixin
 from core.models import (
     Chore,
@@ -586,3 +588,91 @@ class TimerStopView(KidRequiredMixin, View):
             "balance": new_balance,
             "balance_display": format_balance(new_balance),
         })
+
+
+# ---------------------------------------------------------------------------
+# Parent Bank Management
+# ---------------------------------------------------------------------------
+
+
+class TimeAdjustView(ParentRequiredMixin, View):
+    """Parent manual time bank adjustment: add or subtract minutes per kid."""
+
+    def get(self, request):
+        form = TimeAdjustForm()
+        kids = self._get_kids_with_balances()
+        return render(request, "core/time_adjust.html", {
+            "form": form,
+            "kids": kids,
+        })
+
+    def post(self, request):
+        form = TimeAdjustForm(request.POST)
+        if form.is_valid():
+            kid = form.cleaned_data["kid"]
+            amount = form.cleaned_data["amount"]
+            note = form.cleaned_data["note"] or f"Manual adjustment by {request.user.first_name}"
+            TimeBankTransaction.objects.create(
+                kid=kid,
+                transaction_type=TimeBankTransaction.TransactionType.ADJUST,
+                amount=amount,
+                note=note,
+                created_by=request.user,
+            )
+            sign = "+" if amount >= 0 else ""
+            messages.success(
+                request,
+                f"Adjusted {kid.first_name}'s balance by {sign}{amount} minutes.",
+            )
+            return redirect("bank_adjust")
+        kids = self._get_kids_with_balances()
+        return render(request, "core/time_adjust.html", {
+            "form": form,
+            "kids": kids,
+        })
+
+    @staticmethod
+    def _get_kids_with_balances():
+        kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
+        return [
+            {
+                "user": kid,
+                "balance": TimeBankTransaction.get_balance(kid),
+                "balance_display": format_balance(TimeBankTransaction.get_balance(kid)),
+            }
+            for kid in kids
+        ]
+
+
+class TransactionHistoryView(ParentRequiredMixin, View):
+    """Transaction history with kid filter and HTMX load-more pagination."""
+
+    PAGE_SIZE = 25
+
+    def get(self, request):
+        kid_id = request.GET.get("kid")
+        offset = int(request.GET.get("offset", 0))
+
+        qs = TimeBankTransaction.objects.select_related(
+            "kid", "created_by", "chore_instance__chore"
+        )
+        if kid_id:
+            qs = qs.filter(kid_id=kid_id)
+
+        transactions = list(qs[offset:offset + self.PAGE_SIZE + 1])
+        has_more = len(transactions) > self.PAGE_SIZE
+        transactions = transactions[:self.PAGE_SIZE]
+
+        context = {
+            "transactions": transactions,
+            "has_more": has_more,
+            "next_offset": offset + self.PAGE_SIZE,
+            "kid_id": kid_id,
+        }
+
+        if request.headers.get("HX-Request"):
+            return render(request, "core/_transaction_rows.html", context)
+
+        kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
+        context["kids"] = kids
+        return render(request, "core/transaction_history.html", context)

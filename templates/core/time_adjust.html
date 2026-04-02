@@ -1,0 +1,96 @@
+{% extends "base_parent.html" %}
+
+{% block nav_bank_adjust_active %}active{% endblock %}
+
+{% block title %}Manage Time Bank{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h3 class="mb-4">Manage Time Bank</h3>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Kid Balance Cards -->
+    <div class="row mb-4">
+        {% for kid in kids %}
+        <div class="col-md-4 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="fs-1">{{ kid.user.emoji_avatar }}</div>
+                    <h5 class="card-title">{{ kid.user.first_name }}</h5>
+                    <p class="card-text fs-4 {% if kid.balance >= 15 %}text-success{% elif kid.balance > 0 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ kid.balance_display }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Adjustment Form -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Manual Adjustment</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="id_kid" class="form-label">Kid</label>
+                    {{ form.kid }}
+                    {% if form.kid.errors %}
+                    <div class="invalid-feedback d-block">{{ form.kid.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="mb-3">
+                    <label class="form-label">Quick Presets</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-success" data-preset="15">+15m</button>
+                        <button type="button" class="btn btn-outline-success" data-preset="30">+30m</button>
+                        <button type="button" class="btn btn-outline-success" data-preset="60">+1h</button>
+                        <button type="button" class="btn btn-outline-danger" data-preset="-15">-15m</button>
+                        <button type="button" class="btn btn-outline-danger" data-preset="-30">-30m</button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_amount" class="form-label">Amount (minutes)</label>
+                    {{ form.amount }}
+                    <div class="form-text">{{ form.amount.help_text }}</div>
+                    {% if form.amount.errors %}
+                    <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_note" class="form-label">Note (optional)</label>
+                    {{ form.note }}
+                    {% if form.note.errors %}
+                    <div class="invalid-feedback d-block">{{ form.note.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg">Apply Adjustment</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll("[data-preset]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.getElementById("id_amount").value = btn.dataset.preset;
+    });
+});
+</script>
+{% endblock %}
