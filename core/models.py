@@ -3,10 +3,12 @@
 Custom User model with role (parent/kid) and emoji avatar.
 Chore system: Chore (definition), ChoreInstance (per-kid occurrence),
 ChoreTemplate (pre-built suggestions for parents).
+Time bank: TimeBankTransaction (append-only ledger), TimerSession (timer usage).
 """
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Sum
 
 
 class User(AbstractUser):
@@ -130,3 +132,96 @@ class ChoreTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class TimeBankTransaction(models.Model):
+    """Append-only ledger entry for time bank balance changes."""
+
+    class TransactionType(models.TextChoices):
+        EARN = "earn", "Earn"
+        SPEND = "spend", "Spend"
+        PENALTY = "penalty", "Penalty"
+        ADJUST = "adjust", "Adjust"
+
+    kid = models.ForeignKey(
+        "User", on_delete=models.CASCADE, related_name="bank_transactions"
+    )
+    transaction_type = models.CharField(
+        max_length=10, choices=TransactionType.choices
+    )
+    amount = models.IntegerField(
+        help_text="Minutes: positive adds time, negative subtracts"
+    )
+    note = models.CharField(max_length=200, blank=True, default="")
+    created_by = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_transactions",
+    )
+    chore_instance = models.ForeignKey(
+        ChoreInstance,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["kid", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_transaction_type_display()} {self.amount}m for {self.kid}"
+
+    @classmethod
+    def get_balance(cls, kid):
+        """Return total balance in minutes for a kid (sum of all transactions)."""
+        result = cls.objects.filter(kid=kid).aggregate(total=Sum("amount"))
+        return result["total"] or 0
+
+
+def format_balance(minutes):
+    """Format a balance in minutes as a human-readable string (e.g. 2h 15m)."""
+    if minutes == 0:
+        return "0m"
+    sign = "-" if minutes < 0 else ""
+    abs_min = abs(minutes)
+    if abs_min >= 60:
+        h, m = divmod(abs_min, 60)
+        return f"{sign}{h}h {m}m" if m else f"{sign}{h}h"
+    return f"{sign}{abs_min}m"
+
+
+class TimerSession(models.Model):
+    """Records timer usage — links to a SPEND transaction at start."""
+
+    kid = models.ForeignKey(
+        "User", on_delete=models.CASCADE, related_name="timer_sessions"
+    )
+    requested_minutes = models.PositiveIntegerField()
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    ended_reason = models.CharField(max_length=20, default="manual")
+    spend_transaction = models.OneToOneField(
+        TimeBankTransaction,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="timer_session_spend",
+    )
+
+    @property
+    def actual_minutes(self):
+        """Return elapsed minutes if session has ended, else 0."""
+        if self.ended_at:
+            return int((self.ended_at - self.started_at).total_seconds() / 60)
+        return 0
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.kid} - {self.requested_minutes}m ({self.ended_reason})"
