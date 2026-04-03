@@ -127,7 +127,42 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
 <script>
+// Web Audio for chore completion sound
+let audioCtx = null;
+
+function initAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playChoreSound() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    // Tone 1: C5
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.connect(gain1); gain1.connect(audioCtx.destination);
+    osc1.frequency.value = 523;
+    gain1.gain.setValueAtTime(0.2, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc1.start(now); osc1.stop(now + 0.15);
+    // Tone 2: E5
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2); gain2.connect(audioCtx.destination);
+    osc2.frequency.value = 659;
+    gain2.gain.setValueAtTime(0.2, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc2.start(now + 0.15); osc2.stop(now + 0.4);
+}
+
+// Init audio on first user interaction (required by browser autoplay policy)
+document.addEventListener("click", function initOnce() {
+    initAudioCtx();
+    document.removeEventListener("click", initOnce);
+}, { once: true });
+
 document.body.addEventListener("chore-completed", function() {
+    playChoreSound();
     confetti({
         particleCount: 80,
         spread: 70,
