@@ -201,6 +201,8 @@ class KidHomeView(KidRequiredMixin, TemplateView):
         ctx["emoji_avatar"] = user.emoji_avatar
         ctx["balance"] = TimeBankTransaction.get_balance(user)
         ctx["balance_display"] = format_balance(ctx["balance"])
+        ctx["streak"] = ChoreInstance.get_streak(user)
+        ctx["longest_streak"] = ChoreInstance.get_longest_streak(user)
         return ctx
 
 
@@ -450,6 +452,7 @@ class KidChoreListView(KidRequiredMixin, TemplateView):
             "afternoon_chores": afternoon_chores,
             "evening_chores": evening_chores,
             "upcoming_by_date": upcoming_by_date,
+            "streak": ChoreInstance.get_streak(user),
         })
         return ctx
 

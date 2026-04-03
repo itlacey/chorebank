@@ -36,3 +36,9 @@ def user_avatar(user, size="3rem"):
         "name": user.first_name,
         "size": size,
     }
+
+
+@register.simple_tag
+def streak_display(streak):
+    """Return the streak number as a string for template display."""
+    return str(streak)

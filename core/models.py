@@ -6,9 +6,13 @@ ChoreTemplate (pre-built suggestions for parents).
 Time bank: TimeBankTransaction (append-only ledger), TimerSession (timer usage).
 """
 
+from collections import defaultdict
+from datetime import timedelta
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import Sum
+from django.utils.timezone import localdate
 
 
 class User(AbstractUser):
@@ -113,6 +117,72 @@ class ChoreInstance(models.Model):
 
     def __str__(self):
         return f"{self.chore.name} - {self.assigned_to} ({self.due_date})"
+
+    @classmethod
+    def _streak_data(cls, kid):
+        """Return per-date completion data for the last 30 days.
+
+        Returns a dict mapping date -> (total_required, completed_required).
+        Only considers required chores (bonus chores don't break streaks).
+        Days with zero required chores are skipped.
+        """
+        today = localdate()
+        start = today - timedelta(days=30)
+        instances = cls.objects.filter(
+            assigned_to=kid,
+            due_date__gte=start,
+            due_date__lte=today,
+            chore__chore_type="required",
+        ).values_list("due_date", "completed")
+
+        by_date = defaultdict(lambda: [0, 0])  # [total, completed]
+        for due_date, completed in instances:
+            by_date[due_date][0] += 1
+            if completed:
+                by_date[due_date][1] += 1
+        return today, by_date
+
+    @classmethod
+    def get_streak(cls, kid):
+        """Compute the current consecutive-day streak for a kid.
+
+        A day counts as completed if ALL required chores for that day are done.
+        Days with no required chores are skipped (don't break streak).
+        Starts counting from today (or yesterday if today has incomplete chores).
+        """
+        today, by_date = cls._streak_data(kid)
+        streak = 0
+        for i in range(31):
+            d = today - timedelta(days=i)
+            if d not in by_date:
+                continue  # no required chores this day, skip
+            total, done = by_date[d]
+            if done >= total:
+                streak += 1
+            else:
+                # Today incomplete is okay -- might not be done yet
+                if i == 0:
+                    continue
+                break
+        return streak
+
+    @classmethod
+    def get_longest_streak(cls, kid):
+        """Compute the longest consecutive-day streak in the last 30 days."""
+        today, by_date = cls._streak_data(kid)
+        longest = 0
+        current = 0
+        for i in range(30, -1, -1):
+            d = today - timedelta(days=i)
+            if d not in by_date:
+                continue  # skip days with no required chores
+            total, done = by_date[d]
+            if done >= total:
+                current += 1
+                longest = max(longest, current)
+            else:
+                current = 0
+        return longest
 
 
 class ChoreTemplate(models.Model):
