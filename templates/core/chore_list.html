@@ -11,11 +11,94 @@
     <div class="col-lg-10">
 
         <!-- Action bar -->
-        <div class="mb-3 d-flex justify-content-end">
+        <div class="mb-3 d-flex justify-content-between">
+            <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#quick-add-section">
+                <i class="bi bi-lightning-fill me-1"></i> Quick Add from Template
+            </button>
             <a href="{% url 'chore_create' %}" class="btn btn-primary">
                 <i class="bi bi-plus-lg me-1"></i> Create New Chore
             </a>
         </div>
+
+        <!-- Quick Add Section (collapsible) -->
+        {% if templates_list %}
+        <div class="collapse mb-4" id="quick-add-section">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Pick a template to create a chore quickly:</h6>
+                    <div class="row g-2 mb-3">
+                        {% for tmpl in templates_list %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card h-100 template-card" role="button"
+                                 data-template-id="{{ tmpl.pk }}"
+                                 data-template-name="{{ tmpl.name }}"
+                                 onclick="selectTemplate(this)"
+                                 style="cursor: pointer; transition: box-shadow 0.15s;">
+                                <div class="card-body py-2 px-3">
+                                    <div class="fw-semibold">{{ tmpl.name }}</div>
+                                    <div class="d-flex gap-2 mt-1">
+                                        <span class="badge bg-success-subtle text-success-emphasis">+{{ tmpl.suggested_reward_minutes }} min</span>
+                                        {% if tmpl.chore_type == "bonus" %}
+                                        <span class="badge bg-info-subtle text-info-emphasis">Bonus</span>
+                                        {% else %}
+                                        <span class="badge bg-primary-subtle text-primary-emphasis">Required</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Inline form (hidden until template selected) -->
+                    <form id="quick-add-form" method="post" action="{% url 'chore_quick_add' %}" style="display: none;">
+                        {% csrf_token %}
+                        <input type="hidden" name="template_id" id="qa-template-id">
+                        <div class="alert alert-light py-2 mb-3">
+                            Creating: <strong id="qa-template-name"></strong>
+                        </div>
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Assign to:</label>
+                                {% for kid in kids %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="assigned_to" value="{{ kid.pk }}" id="qa-kid-{{ kid.pk }}" checked>
+                                    <label class="form-check-label" for="qa-kid-{{ kid.pk }}">{{ kid.emoji_avatar }} {{ kid.first_name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="qa-recurrence">Recurrence:</label>
+                                <select class="form-select form-select-sm" name="recurrence_type" id="qa-recurrence">
+                                    <option value="daily" selected>Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="once">Once</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-plus-lg me-1"></i> Add Chore
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+        function selectTemplate(el) {
+            document.querySelectorAll('.template-card').forEach(function(c) {
+                c.style.boxShadow = '';
+                c.style.borderColor = '';
+            });
+            el.style.boxShadow = '0 0 0 2px #198754';
+            el.style.borderColor = '#198754';
+            document.getElementById('qa-template-id').value = el.dataset.templateId;
+            document.getElementById('qa-template-name').textContent = el.dataset.templateName;
+            document.getElementById('quick-add-form').style.display = '';
+        }
+        </script>
+        {% endif %}
 
         <!-- Chores table -->
         <div class="card shadow-sm border-0">

@@ -284,6 +284,8 @@ class ParentChoreListView(ParentRequiredMixin, TemplateView):
             .prefetch_related("assigned_to")
             .order_by("time_of_day", "name")
         )
+        ctx["templates_list"] = ChoreTemplate.objects.all()
+        ctx["kids"] = User.objects.filter(role=User.Role.KID).order_by("first_name")
         return ctx
 
 
@@ -390,6 +392,54 @@ class ChoreTemplateLoadView(ParentRequiredMixin, View):
             "penalty_minutes": template.suggested_penalty_minutes,
             "time_of_day": template.suggested_time_of_day,
         })
+
+
+class QuickAddChoreView(ParentRequiredMixin, View):
+    """Create a chore from a template with minimal input."""
+
+    DEADLINE_DEFAULTS = {
+        "morning": "09:00",
+        "afternoon": "14:00",
+        "evening": "19:00",
+    }
+
+    def post(self, request):
+        from datetime import time as dt_time
+
+        template_id = request.POST.get("template_id")
+        kid_ids = request.POST.getlist("assigned_to")
+        recurrence_type = request.POST.get("recurrence_type", "daily")
+
+        if not template_id or not kid_ids:
+            messages.error(request, "Please select a template and at least one kid.")
+            return redirect("chore_list")
+
+        tmpl = get_object_or_404(ChoreTemplate, pk=template_id)
+
+        # Derive deadline from time_of_day
+        deadline_str = self.DEADLINE_DEFAULTS.get(tmpl.suggested_time_of_day, "12:00")
+        h, m = deadline_str.split(":")
+        deadline = dt_time(int(h), int(m))
+
+        chore = Chore.objects.create(
+            name=tmpl.name,
+            chore_type=tmpl.chore_type,
+            reward_minutes=tmpl.suggested_reward_minutes,
+            penalty_minutes=tmpl.suggested_penalty_minutes,
+            time_of_day=tmpl.suggested_time_of_day,
+            deadline_time=deadline,
+            recurrence_type=recurrence_type,
+            created_by=request.user,
+        )
+
+        kids = User.objects.filter(pk__in=kid_ids, role=User.Role.KID)
+        chore.assigned_to.set(kids)
+
+        # Generate instances for the next 7 days
+        generate_chore_instances(target_date=localdate(), days_ahead=7)
+
+        messages.success(request, f'Chore "{chore.name}" created from template!')
+        return redirect("chore_list")
 
 
 # ---------------------------------------------------------------------------

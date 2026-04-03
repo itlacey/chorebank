@@ -18,6 +18,7 @@ from core.views import (
     ParentHomeView,
     PinChangeView,
     PinResetView,
+    QuickAddChoreView,
     TimeAdjustView,
     TimerPageView,
     TimerStartView,
@@ -42,6 +43,7 @@ urlpatterns = [
     path("parent/chores/<int:pk>/edit/", ParentChoreEditView.as_view(), name="chore_edit"),
     path("parent/chores/<int:pk>/delete/", ParentChoreDeleteView.as_view(), name="chore_delete"),
     path("parent/chores/log/", ChoreLogView.as_view(), name="chore_log"),
+    path("parent/chores/quick-add/", QuickAddChoreView.as_view(), name="chore_quick_add"),
     path("parent/chores/load-template/", ChoreTemplateLoadView.as_view(), name="chore_load_template"),
     # Parent bank management
     path("parent/bank/adjust/", TimeAdjustView.as_view(), name="bank_adjust"),
