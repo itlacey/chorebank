@@ -283,12 +283,15 @@ class TimerSession(models.Model):
         blank=True,
         related_name="timer_session_spend",
     )
+    paused_at = models.DateTimeField(null=True, blank=True)
+    paused_seconds = models.PositiveIntegerField(default=0)
 
     @property
     def actual_minutes(self):
         """Return elapsed minutes if session has ended, else 0."""
         if self.ended_at:
-            return int((self.ended_at - self.started_at).total_seconds() / 60)
+            elapsed = (self.ended_at - self.started_at).total_seconds()
+            return int((elapsed - self.paused_seconds) / 60)
         return 0
 
     class Meta:

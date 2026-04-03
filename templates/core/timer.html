@@ -72,9 +72,17 @@
       00:00
     </div>
     <p class="fs-4 mt-3 mb-5" style="opacity: 0.8;">Time remaining</p>
-    <button id="stop-btn" class="btn btn-danger btn-lg px-5 py-3" onclick="stopTimer()">
-      <i class="bi bi-stop-fill me-2"></i>Stop Timer
-    </button>
+    <div class="d-flex gap-3 justify-content-center">
+      <button id="pause-btn" class="btn btn-warning btn-lg px-4 py-3" onclick="pauseTimer()">
+        <i class="bi bi-pause-fill me-2"></i>Pause
+      </button>
+      <button id="resume-btn" class="btn btn-success btn-lg px-4 py-3" onclick="resumeTimer()" style="display: none;">
+        <i class="bi bi-play-fill me-2"></i>Resume
+      </button>
+      <button id="stop-btn" class="btn btn-danger btn-lg px-4 py-3" onclick="stopTimer()">
+        <i class="bi bi-stop-fill me-2"></i>Stop Timer
+      </button>
+    </div>
   </div>
 </div>
 
@@ -102,6 +110,7 @@ let endTimeMs = null;
 let timerInterval = null;
 let audioCtx = null;
 let totalMs = null;
+let isPaused = false;
 
 // CSRF helper
 function getCookie(name) {
@@ -240,6 +249,45 @@ async function startTimer() {
     }
 }
 
+// Pause timer
+async function pauseTimer() {
+    clearInterval(timerInterval);
+    isPaused = true;
+    document.getElementById("pause-btn").style.display = "none";
+    document.getElementById("resume-btn").style.display = "";
+    document.querySelector(".timer-overlay").style.backgroundColor = "#D0D8E0";
+
+    try {
+        await fetch("/kid/timer/pause/", {
+            method: "POST",
+            headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
+        });
+    } catch (err) {
+        // If server fails, still show paused state locally
+    }
+}
+
+// Resume timer
+async function resumeTimer() {
+    try {
+        const resp = await fetch("/kid/timer/resume/", {
+            method: "POST",
+            headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            endTimeMs = data.end_time_ms;
+            isPaused = false;
+            document.getElementById("resume-btn").style.display = "none";
+            document.getElementById("pause-btn").style.display = "";
+            timerInterval = setInterval(updateDisplay, 1000);
+            updateDisplay();
+        }
+    } catch (err) {
+        alert("Network error -- try again");
+    }
+}
+
 // Stop timer
 async function stopTimer() {
     clearInterval(timerInterval);
@@ -283,8 +331,18 @@ document.addEventListener("DOMContentLoaded", function() {
     initAudio();
     document.getElementById("setup-state").style.display = "none";
     document.querySelector(".timer-overlay").style.display = "flex";
+    {% if is_paused %}
+    // Session is paused -- show paused state
+    isPaused = true;
+    document.getElementById("pause-btn").style.display = "none";
+    document.getElementById("resume-btn").style.display = "";
+    document.querySelector(".timer-overlay").style.backgroundColor = "#D0D8E0";
+    // Show frozen time (remaining = end - now, but since end was shifted by pause, it shows correct remaining)
+    updateDisplay();
+    {% else %}
     timerInterval = setInterval(updateDisplay, 1000);
     updateDisplay();
+    {% endif %}
     {% endif %}
 });
 

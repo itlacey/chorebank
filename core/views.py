@@ -560,8 +560,12 @@ class TimerPageView(KidRequiredMixin, TemplateView):
         )
         for session in stale_sessions:
             expected_end = session.started_at + timedelta(
-                minutes=session.requested_minutes
+                minutes=session.requested_minutes,
+                seconds=session.paused_seconds,
             )
+            # If currently paused, add ongoing pause time
+            if session.paused_at:
+                expected_end += now - session.paused_at
             if expected_end < now:
                 session.ended_at = expected_end
                 session.ended_reason = "timer_expired"
@@ -574,8 +578,16 @@ class TimerPageView(KidRequiredMixin, TemplateView):
         )
         if active_session:
             expected_end = active_session.started_at + timedelta(
-                minutes=active_session.requested_minutes
+                minutes=active_session.requested_minutes,
+                seconds=active_session.paused_seconds,
             )
+            if active_session.paused_at:
+                # Currently paused -- add ongoing pause duration to expected end
+                expected_end += now - active_session.paused_at
+                ctx["is_paused"] = True
+                ctx["paused_seconds"] = active_session.paused_seconds + int(
+                    (now - active_session.paused_at).total_seconds()
+                )
             if expected_end > now:
                 ctx["active_session"] = active_session
                 ctx["active_session_end_time_ms"] = int(
@@ -657,11 +669,21 @@ class TimerStopView(KidRequiredMixin, View):
             TimerSession, kid=request.user, ended_at__isnull=True
         )
 
-        session.ended_at = timezone.now()
+        now = timezone.now()
+
+        # If currently paused, finalize the pause duration
+        if session.paused_at:
+            session.paused_seconds += int(
+                (now - session.paused_at).total_seconds()
+            )
+            session.paused_at = None
+
+        session.ended_at = now
         session.ended_reason = "manual"
         session.save()
 
-        used_seconds = (session.ended_at - session.started_at).total_seconds()
+        total_elapsed = (session.ended_at - session.started_at).total_seconds()
+        used_seconds = total_elapsed - session.paused_seconds
         used_minutes = int(used_seconds / 60)
         unused = session.requested_minutes - used_minutes
 
@@ -681,6 +703,51 @@ class TimerStopView(KidRequiredMixin, View):
             "refunded_minutes": max(0, unused),
             "balance": new_balance,
             "balance_display": format_balance(new_balance),
+        })
+
+
+class TimerPauseView(KidRequiredMixin, View):
+    """Pause an active timer session."""
+
+    def post(self, request):
+        session = TimerSession.objects.filter(
+            kid=request.user, ended_at__isnull=True, paused_at__isnull=True
+        ).first()
+        if not session:
+            return JsonResponse({"error": "No active running session"}, status=400)
+
+        session.paused_at = timezone.now()
+        session.save()
+        return JsonResponse({"ok": True, "paused": True})
+
+
+class TimerResumeView(KidRequiredMixin, View):
+    """Resume a paused timer session."""
+
+    def post(self, request):
+        session = TimerSession.objects.filter(
+            kid=request.user, ended_at__isnull=True, paused_at__isnull=False
+        ).first()
+        if not session:
+            return JsonResponse({"error": "No paused session"}, status=400)
+
+        now = timezone.now()
+        pause_duration = int((now - session.paused_at).total_seconds())
+        session.paused_seconds += pause_duration
+        session.paused_at = None
+        session.save()
+
+        # Recalculate end time: original end + total paused seconds
+        expected_end = session.started_at + timedelta(
+            minutes=session.requested_minutes,
+            seconds=session.paused_seconds,
+        )
+
+        return JsonResponse({
+            "ok": True,
+            "resumed": True,
+            "paused_seconds": session.paused_seconds,
+            "end_time_ms": int(expected_end.timestamp() * 1000),
         })
 
 

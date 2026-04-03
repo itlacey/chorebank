@@ -21,6 +21,8 @@ from core.views import (
     QuickAddChoreView,
     TimeAdjustView,
     TimerPageView,
+    TimerPauseView,
+    TimerResumeView,
     TimerStartView,
     TimerStopView,
     TransactionHistoryView,
@@ -55,4 +57,6 @@ urlpatterns = [
     path("kid/timer/", TimerPageView.as_view(), name="kid_timer"),
     path("kid/timer/start/", TimerStartView.as_view(), name="timer_start"),
     path("kid/timer/stop/", TimerStopView.as_view(), name="timer_stop"),
+    path("kid/timer/pause/", TimerPauseView.as_view(), name="timer_pause"),
+    path("kid/timer/resume/", TimerResumeView.as_view(), name="timer_resume"),
 ]
