@@ -1,0 +1,36 @@
+{% load tz %}
+{% for inst in instances %}
+<tr>
+    <td>{{ inst.due_date|date:"M j" }}</td>
+    <td>{{ inst.chore.name }}</td>
+    <td>{{ inst.assigned_to.emoji_avatar }} {{ inst.assigned_to.first_name }}</td>
+    <td>
+        {% if inst.status == "Completed" %}
+            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>
+        {% else %}
+            <span class="badge bg-danger">
+                <i class="bi bi-x-circle"></i> Missed{% if inst.penalty_amount %} -{{ inst.penalty_amount }}m{% endif %}
+            </span>
+        {% endif %}
+    </td>
+    <td>
+        {% if inst.completed_at %}
+            {{ inst.completed_at|date:"g:i A" }}
+        {% else %}
+            <span class="text-muted">--</span>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% if has_more %}
+<tr id="chore-log-load-more">
+    <td colspan="5" class="text-center py-3">
+        <button hx-get="{% url 'chore_log' %}?offset={{ next_offset }}{% if kid_id %}&kid={{ kid_id }}{% endif %}"
+                hx-target="#chore-log-load-more"
+                hx-swap="outerHTML"
+                class="btn btn-outline-primary btn-sm">
+            Load More
+        </button>
+    </td>
+</tr>
+{% endif %}

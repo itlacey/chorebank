@@ -3,6 +3,7 @@
 from django.urls import path
 
 from core.views import (
+    ChoreLogView,
     ChoreTemplateLoadView,
     CompleteChoreView,
     HomeRouterView,
@@ -40,6 +41,7 @@ urlpatterns = [
     path("parent/chores/create/", ParentChoreCreateView.as_view(), name="chore_create"),
     path("parent/chores/<int:pk>/edit/", ParentChoreEditView.as_view(), name="chore_edit"),
     path("parent/chores/<int:pk>/delete/", ParentChoreDeleteView.as_view(), name="chore_delete"),
+    path("parent/chores/log/", ChoreLogView.as_view(), name="chore_log"),
     path("parent/chores/load-template/", ChoreTemplateLoadView.as_view(), name="chore_load_template"),
     # Parent bank management
     path("parent/bank/adjust/", TimeAdjustView.as_view(), name="bank_adjust"),

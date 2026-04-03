@@ -19,6 +19,7 @@ TimerStartView         -- Start timer session with optimistic SPEND
 TimerStopView          -- Stop timer session with ADJUST refund
 TimeAdjustView         -- Parent manual time bank adjustment
 TransactionHistoryView -- Transaction history with kid filter and HTMX pagination
+ChoreLogView           -- Chore completion log with kid filter and HTMX pagination
 """
 
 from collections import OrderedDict
@@ -716,3 +717,57 @@ class TransactionHistoryView(ParentRequiredMixin, View):
         kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
         context["kids"] = kids
         return render(request, "core/transaction_history.html", context)
+
+
+class ChoreLogView(ParentRequiredMixin, View):
+    """Chore completion log with kid filter and HTMX load-more pagination."""
+
+    PAGE_SIZE = 25
+
+    def get(self, request):
+        kid_id = request.GET.get("kid")
+        offset = int(request.GET.get("offset", 0))
+        today = localdate()
+
+        # Completed chores OR missed required/one-off chores (past deadline)
+        from django.db.models import Q
+
+        qs = ChoreInstance.objects.filter(
+            Q(completed=True)
+            | Q(completed=False, due_date__lt=today, chore__chore_type="required")
+            | Q(completed=False, due_date__lt=today, chore__recurrence_type="once")
+        ).select_related("chore", "assigned_to").order_by("-due_date", "-completed_at")
+
+        if kid_id:
+            qs = qs.filter(assigned_to_id=kid_id)
+
+        instances = list(qs[offset:offset + self.PAGE_SIZE + 1])
+        has_more = len(instances) > self.PAGE_SIZE
+        instances = instances[:self.PAGE_SIZE]
+
+        # Annotate status and penalty amount
+        for inst in instances:
+            if inst.completed:
+                inst.status = "Completed"
+                inst.penalty_amount = None
+            else:
+                inst.status = "Missed"
+                inst.penalty_amount = (
+                    inst.chore.penalty_minutes
+                    if inst.chore.chore_type == "required" and inst.chore.penalty_minutes
+                    else None
+                )
+
+        context = {
+            "instances": instances,
+            "has_more": has_more,
+            "next_offset": offset + self.PAGE_SIZE,
+            "kid_id": kid_id,
+        }
+
+        if request.headers.get("HX-Request"):
+            return render(request, "core/_chore_log_rows.html", context)
+
+        kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
+        context["kids"] = kids
+        return render(request, "core/chore_log.html", context)

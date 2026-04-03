@@ -1,0 +1,56 @@
+{% extends "base_parent.html" %}
+{% load core_tags %}
+
+{% block title %}Chore Log - ChoreBank{% endblock %}
+
+{% block page_title %}Chore Log{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+
+        <!-- Kid filter -->
+        <div class="row mb-3">
+            <div class="col-auto">
+                <select class="form-select form-select-sm" onchange="window.location.href='{% url 'chore_log' %}' + (this.value ? '?kid=' + this.value : '')">
+                    <option value="">All Kids</option>
+                    {% for kid in kids %}
+                    <option value="{{ kid.pk }}" {% if kid_id|stringformat:"s" == kid.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ kid.emoji_avatar }} {{ kid.first_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Chore log table -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Chore</th>
+                                <th>Kid</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% include "core/_chore_log_rows.html" %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if not instances %}
+        <div class="text-center text-muted py-4">
+            No chore log entries yet.
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
