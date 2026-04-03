@@ -204,23 +204,63 @@ class KidHomeView(KidRequiredMixin, TemplateView):
 
 
 class ParentHomeView(ParentRequiredMixin, TemplateView):
-    """Parent landing page -- overview of all kids with placeholder balances."""
+    """Parent dashboard -- kid overview cards with balance, transactions, chore progress."""
 
     template_name = "core/parent_home.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
-        ctx["kids"] = [
-            {
+        today = localdate()
+        kids = list(User.objects.filter(role=User.Role.KID).order_by("first_name"))
+        kid_pks = [k.pk for k in kids]
+
+        # Bulk-fetch last 3 transactions per kid
+        # We fetch all recent transactions and slice per kid in Python
+        all_txns = list(
+            TimeBankTransaction.objects.filter(kid__in=kid_pks)
+            .select_related("chore_instance__chore")
+            .order_by("kid_id", "-created_at")
+        )
+        txns_by_kid = {}
+        for txn in all_txns:
+            txns_by_kid.setdefault(txn.kid_id, [])
+            if len(txns_by_kid[txn.kid_id]) < 3:
+                txns_by_kid[txn.kid_id].append(txn)
+
+        # Bulk-fetch chore counts for today
+        today_instances = list(
+            ChoreInstance.objects.filter(
+                assigned_to__in=kid_pks, due_date=today
+            ).values_list("assigned_to_id", "completed")
+        )
+        chores_total_by_kid = {}
+        chores_done_by_kid = {}
+        for kid_id, completed in today_instances:
+            chores_total_by_kid[kid_id] = chores_total_by_kid.get(kid_id, 0) + 1
+            if completed:
+                chores_done_by_kid[kid_id] = chores_done_by_kid.get(kid_id, 0) + 1
+
+        kid_cards = []
+        for kid in kids:
+            balance = TimeBankTransaction.get_balance(kid)
+            if balance >= 15:
+                balance_color = "text-success"
+            elif balance > 0:
+                balance_color = "text-warning"
+            else:
+                balance_color = "text-danger"
+            kid_cards.append({
                 "first_name": kid.first_name,
                 "emoji_avatar": kid.emoji_avatar,
-                "balance": TimeBankTransaction.get_balance(kid),
-                "balance_display": format_balance(TimeBankTransaction.get_balance(kid)),
+                "balance": balance,
+                "balance_display": format_balance(balance),
+                "balance_color": balance_color,
+                "recent_transactions": txns_by_kid.get(kid.pk, []),
+                "chores_today_total": chores_total_by_kid.get(kid.pk, 0),
+                "chores_today_done": chores_done_by_kid.get(kid.pk, 0),
                 "user": kid,
-            }
-            for kid in kids
-        ]
+            })
+        ctx["kids"] = kid_cards
         return ctx
 
 
