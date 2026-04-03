@@ -4,15 +4,9 @@ from django.db import migrations
 
 
 def create_schedule(apps, schema_editor):
-    Schedule = apps.get_model("django_q", "Schedule")
-    Schedule.objects.get_or_create(
-        func="core.tasks.generate_chore_instances",
-        defaults={
-            "name": "Generate daily chore instances",
-            "schedule_type": "D",  # Schedule.DAILY
-            "repeats": -1,  # Repeat forever
-        },
-    )
+    # No-op: setup_schedules management command handles schedule creation.
+    # Original migration used invalid schedule_type integer.
+    pass
 
 
 def remove_schedule(apps, schema_editor):
