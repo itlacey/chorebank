@@ -26,13 +26,13 @@
     </a>
 </li>
 <li class="nav-item">
-    <a href="/parent/kids/" class="nav-link {% block nav_kids_active %}{% endblock %}">
-        <i class="nav-icon bi bi-people"></i>
-        <p>Kids</p>
+    <a href="{% url 'chore_log' %}" class="nav-link {% block nav_chore_log_active %}{% endblock %}">
+        <i class="nav-icon bi bi-journal-text"></i>
+        <p>Chore Log</p>
     </a>
 </li>
 <li class="nav-item">
-    <a href="/parent/settings/" class="nav-link {% block nav_settings_active %}{% endblock %}">
+    <a href="{% url 'pin_change' %}" class="nav-link {% block nav_settings_active %}{% endblock %}">
         <i class="nav-icon bi bi-gear"></i>
         <p>Settings</p>
     </a>
