@@ -101,6 +101,7 @@ class ChoreInstance(models.Model):
     due_date = models.DateField()
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
+    penalty_applied = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ["chore", "assigned_to", "due_date"]

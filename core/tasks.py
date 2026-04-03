@@ -2,11 +2,14 @@
 
 generate_chore_instances is scheduled daily via Django Q2 to create
 ChoreInstance records for each active chore and its assigned kids.
+process_penalties runs every 5 minutes to penalize missed required chores.
 """
 
 import calendar
-from datetime import timedelta
+from datetime import datetime, timedelta
 
+from django.db import transaction
+from django.utils import timezone
 from django.utils.timezone import localdate
 
 
@@ -69,3 +72,69 @@ def _is_due_on(chore, target_date):
     elif chore.recurrence_type == Chore.RecurrenceType.ONCE:
         return target_date == chore.one_off_date
     return False
+
+
+def process_penalties(target_date=None):
+    """Apply penalty transactions for overdue, incomplete required chores.
+
+    Finds all ChoreInstance records that are:
+    - For required chores (only required chores have penalties)
+    - Not completed
+    - Not yet penalized (penalty_applied=False)
+    - Past their deadline (due_date + deadline_time < now)
+    - On active chores
+
+    Uses select_for_update inside transaction.atomic to prevent races.
+    No date filtering on due_date -- processes ALL overdue instances for
+    catch-up after downtime. penalty_applied=False prevents double-processing.
+
+    Returns count of penalties applied.
+    """
+    from core.models import ChoreInstance, TimeBankTransaction
+
+    now = timezone.now()
+
+    instances = (
+        ChoreInstance.objects.filter(
+            chore__chore_type="required",
+            chore__is_active=True,
+            completed=False,
+            penalty_applied=False,
+        )
+        .select_related("chore")
+    )
+
+    penalty_count = 0
+    for instance in instances:
+        # Combine due_date + deadline_time into a timezone-aware datetime
+        deadline_naive = datetime.combine(
+            instance.due_date, instance.chore.deadline_time
+        )
+        deadline_aware = timezone.make_aware(deadline_naive)
+
+        if now <= deadline_aware:
+            continue  # Not yet overdue
+
+        with transaction.atomic():
+            # Re-fetch with lock to prevent double-processing
+            locked = (
+                ChoreInstance.objects.select_for_update()
+                .filter(pk=instance.pk, penalty_applied=False)
+                .first()
+            )
+            if not locked:
+                continue  # Already processed by another worker
+
+            TimeBankTransaction.objects.create(
+                kid=locked.assigned_to,
+                transaction_type=TimeBankTransaction.TransactionType.PENALTY,
+                amount=-instance.chore.penalty_minutes,
+                note=f"Missed: {instance.chore.name}",
+                created_by=None,
+                chore_instance=locked,
+            )
+            locked.penalty_applied = True
+            locked.save(update_fields=["penalty_applied"])
+            penalty_count += 1
+
+    return penalty_count
