@@ -5,6 +5,16 @@
 
 {% block nav_home_active %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+@keyframes streak-glow {
+    0%, 100% { box-shadow: 0 0 8px rgba(230, 81, 0, 0.2); }
+    50% { box-shadow: 0 0 16px rgba(230, 81, 0, 0.5); }
+}
+.streak-pulse { animation: streak-glow 2s ease-in-out infinite; }
+</style>
+{% endblock %}
+
 {% block page_header %}{% endblock %}
 
 {% block content %}
@@ -29,6 +39,20 @@
                 </h1>
             </div>
         </div>
+
+        <!-- Streak badge -->
+        {% if streak > 0 %}
+        <div class="card shadow-sm border-0 mb-4 {% if streak >= 7 %}streak-pulse{% endif %}" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">
+            <div class="card-body text-center py-3">
+                <span style="font-size: 2rem;">&#x1F525;</span>
+                <span class="fs-3 fw-bold" style="color: #E65100;">{{ streak }}</span>
+                <span class="fs-5" style="color: #BF360C;">day streak!</span>
+                {% if longest_streak > streak %}
+                <br><small class="text-muted">Best: {{ longest_streak }} days</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Quick actions -->
         <div class="row g-3">
