@@ -9,7 +9,7 @@ def create_schedule(apps, schema_editor):
         func="core.tasks.generate_chore_instances",
         defaults={
             "name": "Generate daily chore instances",
-            "schedule_type": 2,  # Schedule.DAILY
+            "schedule_type": "D",  # Schedule.DAILY
             "repeats": -1,  # Repeat forever
         },
     )
