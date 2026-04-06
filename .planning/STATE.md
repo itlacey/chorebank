@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 Phase: 4 of 4 (Automation & Dashboard)
 Plan: 2 of 2 in current phase
 Status: Quick tasks in progress
-Last activity: 2026-04-03 -- Completed quick-001 (streaks, quick-add, sounds, pause)
+Last activity: 2026-04-03 -- Completed quick-002 (fix kid chore Done button)
 
 Progress: [████████████] 100% + quick tasks
 
@@ -97,5 +97,5 @@ None
 ## Session Continuity
 
 Last session: 2026-04-03
-Stopped at: Completed quick-001-PLAN.md (streaks, quick-add, sounds, timer pause)
+Stopped at: Completed quick-002-PLAN.md (fix kid chore Done button)
 Resume file: None
