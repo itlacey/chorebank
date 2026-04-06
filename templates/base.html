@@ -125,10 +125,13 @@
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-rc7/dist/js/adminlte.min.js"></script>
 
 <!-- HTMX -->
-{% django_htmx_script %}
+{% htmx_script %}
 <script>
 document.body.addEventListener("htmx:configRequest", function(e) {
-    e.detail.headers["X-CSRFToken"] = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    e.detail.headers["X-CSRFToken"] = document.cookie
+        .split("; ")
+        .find(row => row.startsWith("csrftoken="))
+        ?.split("=")[1] || "";
 });
 </script>
 
