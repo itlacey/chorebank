@@ -138,6 +138,25 @@ document.body.addEventListener("htmx:configRequest", function(e) {
 <!-- ChoreBank JS -->
 <script src="{% static 'js/chorebank.js' %}"></script>
 
+<!-- Timezone conversion: converts UTC timestamps to local time -->
+<script>
+function convertTimesToLocal() {
+    document.querySelectorAll('.local-time[data-utc]').forEach(function(el) {
+        var date = new Date(el.getAttribute('data-utc'));
+        if (isNaN(date.getTime())) return;
+        var options;
+        if (el.getAttribute('data-format') === 'long') {
+            options = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+        } else {
+            options = { hour: 'numeric', minute: '2-digit', hour12: true };
+        }
+        el.textContent = new Intl.DateTimeFormat(undefined, options).format(date);
+    });
+}
+document.addEventListener('DOMContentLoaded', convertTimesToLocal);
+document.body.addEventListener('htmx:afterSwap', convertTimesToLocal);
+</script>
+
 {% block extra_js %}{% endblock %}
 
 </body>
