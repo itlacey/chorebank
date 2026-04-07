@@ -945,6 +945,37 @@ class TimeRequestDismissView(ParentRequiredMixin, View):
         return render(request, "core/_empty.html")
 
 
+class KidSettingsView(KidRequiredMixin, View):
+    """Kid settings page for sound and animation preferences."""
+
+    def get(self, request):
+        return render(request, "core/kid_settings.html", {
+            "sound_choices": User.SoundPreference.choices,
+            "animation_choices": User.AnimationPreference.choices,
+            "current_sound": request.user.sound_preference,
+            "current_animation": request.user.animation_preference,
+        })
+
+    def post(self, request):
+        sound = request.POST.get("sound_preference", "chime")
+        animation = request.POST.get("animation_preference", "confetti")
+
+        valid_sounds = [c[0] for c in User.SoundPreference.choices]
+        valid_animations = [c[0] for c in User.AnimationPreference.choices]
+
+        if sound not in valid_sounds:
+            sound = "chime"
+        if animation not in valid_animations:
+            animation = "confetti"
+
+        request.user.sound_preference = sound
+        request.user.animation_preference = animation
+        request.user.save()
+
+        messages.success(request, "Settings saved!")
+        return redirect("kid_settings")
+
+
 class ChoreLogView(ParentRequiredMixin, View):
     """Chore completion log with kid filter and HTMX load-more pagination."""
 

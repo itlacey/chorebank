@@ -10,6 +10,7 @@ from core.views import (
     HomeRouterView,
     KidChoreListView,
     KidHomeView,
+    KidSettingsView,
     LoginView,
     LogoutView,
     ParentChoreCreateView,
@@ -58,6 +59,7 @@ urlpatterns = [
     path("parent/bank/history/", TransactionHistoryView.as_view(), name="bank_history"),
     # Kid chore views
     path("kid/balance-badge/", BalanceBadgeView.as_view(), name="balance_badge"),
+    path("kid/settings/", KidSettingsView.as_view(), name="kid_settings"),
     path("kid/chores/", KidChoreListView.as_view(), name="kid_chore_list"),
     path("kid/chores/<int:instance_id>/complete/", CompleteChoreView.as_view(), name="complete_chore"),
     # Timer
