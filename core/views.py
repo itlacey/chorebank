@@ -244,6 +244,20 @@ class ParentHomeView(ParentRequiredMixin, TemplateView):
             if completed:
                 chores_done_by_kid[kid_id] = chores_done_by_kid.get(kid_id, 0) + 1
 
+        # Bulk-fetch weekly chore counts (Monday through today)
+        week_start = today - timedelta(days=today.weekday())  # Monday
+        week_instances = list(
+            ChoreInstance.objects.filter(
+                assigned_to__in=kid_pks, due_date__gte=week_start, due_date__lte=today
+            ).values_list("assigned_to_id", "completed")
+        )
+        weekly_total_by_kid = {}
+        weekly_done_by_kid = {}
+        for kid_id, completed in week_instances:
+            weekly_total_by_kid[kid_id] = weekly_total_by_kid.get(kid_id, 0) + 1
+            if completed:
+                weekly_done_by_kid[kid_id] = weekly_done_by_kid.get(kid_id, 0) + 1
+
         kid_cards = []
         for kid in kids:
             balance = TimeBankTransaction.get_balance(kid)
@@ -262,6 +276,10 @@ class ParentHomeView(ParentRequiredMixin, TemplateView):
                 "recent_transactions": txns_by_kid.get(kid.pk, []),
                 "chores_today_total": chores_total_by_kid.get(kid.pk, 0),
                 "chores_today_done": chores_done_by_kid.get(kid.pk, 0),
+                "weekly_total": weekly_total_by_kid.get(kid.pk, 0),
+                "weekly_done": weekly_done_by_kid.get(kid.pk, 0),
+                "streak": ChoreInstance.get_streak(kid),
+                "longest_streak": ChoreInstance.get_longest_streak(kid),
                 "user": kid,
             })
         ctx["kids"] = kid_cards

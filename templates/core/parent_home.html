@@ -40,6 +40,17 @@
                                      aria-valuemax="{{ kid.chores_today_total }}"></div>
                             </div>
                             {% endif %}
+                            <small class="text-secondary d-block mt-1">
+                                This week: {{ kid.weekly_done }}/{{ kid.weekly_total }} chores
+                            </small>
+                            {% if kid.streak > 0 %}
+                            <div class="mt-2">
+                                <span style="color: #E65100;">&#x1F525; {{ kid.streak }} day streak</span>
+                                {% if kid.longest_streak > kid.streak %}
+                                <small class="text-muted">(best: {{ kid.longest_streak }})</small>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </div>
 
                         <!-- Recent transactions -->
