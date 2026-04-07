@@ -17,7 +17,7 @@
         {% if txn.amount >= 0 %}+{% endif %}{{ txn.amount }}m
     </td>
     <td>{{ txn.note }}</td>
-    <td>{{ txn.created_at|date:"M j, g:i A" }}</td>
+    <td><span class="local-time" data-utc="{{ txn.created_at|date:'c' }}" data-format="long">{{ txn.created_at|date:"M j, g:i A" }}</span></td>
 </tr>
 {% endfor %}
 {% if has_more %}

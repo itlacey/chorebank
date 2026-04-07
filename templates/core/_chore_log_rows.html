@@ -15,7 +15,7 @@
     </td>
     <td>
         {% if inst.completed_at %}
-            {{ inst.completed_at|date:"g:i A" }}
+            <span class="local-time" data-utc="{{ inst.completed_at|date:'c' }}">{{ inst.completed_at|date:"g:i A" }}</span>
         {% else %}
             <span class="text-muted">--</span>
         {% endif %}
