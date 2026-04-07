@@ -46,6 +46,7 @@ from core.models import (
     ChoreInstance,
     ChoreTemplate,
     TimeBankTransaction,
+    TimeRequest,
     TimerSession,
     User,
     format_balance,
@@ -283,6 +284,9 @@ class ParentHomeView(ParentRequiredMixin, TemplateView):
                 "user": kid,
             })
         ctx["kids"] = kid_cards
+        ctx["time_requests"] = TimeRequest.objects.filter(
+            dismissed=False
+        ).select_related("kid")[:10]
         return ctx
 
 
@@ -905,6 +909,40 @@ class TimerHistoryView(KidRequiredMixin, View):
             return render(request, "core/_timer_history_rows.html", context)
 
         return render(request, "core/timer_history.html", context)
+
+
+class TimeRequestCreateView(KidRequiredMixin, View):
+    """Kid requests more screen time. Rate-limited to one per 30 minutes."""
+
+    def post(self, request):
+        from django.utils import timezone as tz
+
+        cutoff = tz.now() - timedelta(minutes=30)
+        recent = TimeRequest.objects.filter(
+            kid=request.user, dismissed=False, created_at__gte=cutoff
+        ).exists()
+
+        if recent:
+            return render(request, "core/_ask_time_result.html", {
+                "message": "Already asked! Give them a minute.",
+                "alert_class": "alert-warning",
+            })
+
+        TimeRequest.objects.create(kid=request.user)
+        return render(request, "core/_ask_time_result.html", {
+            "message": "Request sent!",
+            "alert_class": "alert-success",
+        })
+
+
+class TimeRequestDismissView(ParentRequiredMixin, View):
+    """Parent dismisses a time request."""
+
+    def post(self, request, pk):
+        req = get_object_or_404(TimeRequest, pk=pk, dismissed=False)
+        req.dismissed = True
+        req.save()
+        return render(request, "core/_empty.html")
 
 
 class ChoreLogView(ParentRequiredMixin, View):

@@ -21,6 +21,8 @@ from core.views import (
     PinResetView,
     QuickAddChoreView,
     TimeAdjustView,
+    TimeRequestCreateView,
+    TimeRequestDismissView,
     TimerHistoryView,
     TimerPageView,
     TimerPauseView,
@@ -49,6 +51,8 @@ urlpatterns = [
     path("parent/chores/log/", ChoreLogView.as_view(), name="chore_log"),
     path("parent/chores/quick-add/", QuickAddChoreView.as_view(), name="chore_quick_add"),
     path("parent/chores/load-template/", ChoreTemplateLoadView.as_view(), name="chore_load_template"),
+    # Parent time request dismissal
+    path("parent/dismiss-request/<int:pk>/", TimeRequestDismissView.as_view(), name="dismiss_request"),
     # Parent bank management
     path("parent/bank/adjust/", TimeAdjustView.as_view(), name="bank_adjust"),
     path("parent/bank/history/", TransactionHistoryView.as_view(), name="bank_history"),
@@ -57,6 +61,7 @@ urlpatterns = [
     path("kid/chores/", KidChoreListView.as_view(), name="kid_chore_list"),
     path("kid/chores/<int:instance_id>/complete/", CompleteChoreView.as_view(), name="complete_chore"),
     # Timer
+    path("kid/ask-time/", TimeRequestCreateView.as_view(), name="ask_time"),
     path("kid/timer/history/", TimerHistoryView.as_view(), name="timer_history"),
     path("kid/timer/", TimerPageView.as_view(), name="kid_timer"),
     path("kid/timer/start/", TimerStartView.as_view(), name="timer_start"),

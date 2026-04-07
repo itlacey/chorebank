@@ -205,6 +205,23 @@ class ChoreTemplate(models.Model):
         return self.name
 
 
+class TimeRequest(models.Model):
+    """Kid requests more screen time from parents."""
+
+    kid = models.ForeignKey(
+        "User", on_delete=models.CASCADE, related_name="time_requests"
+    )
+    message = models.CharField(max_length=100, default="Can I have more time?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    dismissed = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.kid.first_name}: {self.message}"
+
+
 class TimeBankTransaction(models.Model):
     """Append-only ledger entry for time bank balance changes."""
 
