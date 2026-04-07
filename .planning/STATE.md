@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 Phase: 4 of 4 (Automation & Dashboard)
 Plan: 2 of 2 in current phase
 Status: Quick tasks in progress
-Last activity: 2026-04-07 -- Completed quick-005 (Feature wins: history, summary, streaks, ask)
+Last activity: 2026-04-07 -- Completed quick-006 (Kid personalized sounds and animations)
 
 Progress: [████████████] 100% + quick tasks
 
@@ -97,6 +97,7 @@ None
 | 003 | Use All button on timer page | 2026-04-07 | 62f9dd2 | [003-timer-use-all-balance](./quick/003-timer-use-all-balance/) |
 | 004 | Fix balance badge refresh on chore completion | 2026-04-07 | 74ab869 | [004-bug-fixes-balance-q2-sidebar](./quick/004-bug-fixes-balance-q2-sidebar/) |
 | 005 | Feature wins: history, summary, streaks, ask | 2026-04-07 | 4b716da | [005-feature-wins-history-summary-streaks-ask](./quick/005-feature-wins-history-summary-streaks-ask/) |
+| 006 | Kid personalized sounds and animations | 2026-04-07 | 8bb6186 | [006-kid-personalized-sounds-animations](./quick/006-kid-personalized-sounds-animations/) |
 
 ### Blockers/Concerns
 
@@ -107,5 +108,5 @@ None
 ## Session Continuity
 
 Last session: 2026-04-07
-Stopped at: Completed quick-005-PLAN.md (Feature wins: history, summary, streaks, ask)
+Stopped at: Completed quick-006-PLAN.md (Kid personalized sounds and animations)
 Resume file: None
