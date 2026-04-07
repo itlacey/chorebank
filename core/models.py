@@ -22,8 +22,26 @@ class User(AbstractUser):
         PARENT = "parent", "Parent"
         KID = "kid", "Kid"
 
+    class SoundPreference(models.TextChoices):
+        CHIME = "chime", "Chime"
+        FANFARE = "fanfare", "Fanfare"
+        COIN = "coin", "Coin"
+        XYLOPHONE = "xylophone", "Xylophone"
+
+    class AnimationPreference(models.TextChoices):
+        CONFETTI = "confetti", "Confetti"
+        FIREWORKS = "fireworks", "Fireworks"
+        STARS = "stars", "Stars"
+        HEARTS = "hearts", "Hearts"
+
     role = models.CharField(max_length=10, choices=Role.choices)
     emoji_avatar = models.CharField(max_length=10, default="\U0001f600")
+    sound_preference = models.CharField(
+        max_length=20, choices=SoundPreference.choices, default="chime"
+    )
+    animation_preference = models.CharField(
+        max_length=20, choices=AnimationPreference.choices, default="confetti"
+    )
 
     @property
     def is_parent(self):
