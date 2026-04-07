@@ -51,6 +51,10 @@
               {% if balance >= 60 %}
               <button class="btn btn-outline-primary btn-lg me-2 mb-2" onclick="setMinutes(60)">60m</button>
               {% endif %}
+              <span class="mx-1 text-muted d-none d-sm-inline" style="opacity: 0.4;">|</span>
+              <button class="btn btn-success btn-lg mb-2" onclick="setMinutes({{ balance }})">
+                <i class="bi bi-lightning-fill me-1"></i>Use All ({{ balance_display }})
+              </button>
             </div>
 
             <!-- Start Button -->
