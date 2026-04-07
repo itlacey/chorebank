@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 Phase: 4 of 4 (Automation & Dashboard)
 Plan: 2 of 2 in current phase
 Status: Quick tasks in progress
-Last activity: 2026-04-07 -- Completed quick-003 (Use All button on timer page)
+Last activity: 2026-04-07 -- Completed quick-004 (Fix balance badge refresh)
 
 Progress: [████████████] 100% + quick tasks
 
@@ -95,6 +95,7 @@ None
 | 001 | Streaks, quick-add, sounds, pause | 2026-04-03 | cb3ae3a | [001-streaks-quickadd-sounds-pause](./quick/001-streaks-quickadd-sounds-pause/) |
 | 002 | Fix kid chore Done button | 2026-04-03 | a628de7 | [002-fix-kid-chore-done-button](./quick/002-fix-kid-chore-done-button/) |
 | 003 | Use All button on timer page | 2026-04-07 | 62f9dd2 | [003-timer-use-all-balance](./quick/003-timer-use-all-balance/) |
+| 004 | Fix balance badge refresh on chore completion | 2026-04-07 | 74ab869 | [004-bug-fixes-balance-q2-sidebar](./quick/004-bug-fixes-balance-q2-sidebar/) |
 
 ### Blockers/Concerns
 
@@ -105,5 +106,5 @@ None
 ## Session Continuity
 
 Last session: 2026-04-07
-Stopped at: Completed quick-003-PLAN.md (Use All button on timer page)
+Stopped at: Completed quick-004-PLAN.md (Fix balance badge refresh)
 Resume file: None
