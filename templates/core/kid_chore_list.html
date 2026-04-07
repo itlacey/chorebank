@@ -127,17 +127,27 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
 <script>
-// Web Audio for chore completion sound
+// User preferences injected from Django
+const SOUND_PREF = "{{ request.user.sound_preference|default:'chime' }}";
+const ANIM_PREF = "{{ request.user.animation_preference|default:'confetti' }}";
+
+// ========== Web Audio Setup ==========
 let audioCtx = null;
 
 function initAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
-function playChoreSound() {
-    if (!audioCtx) return;
+// Init audio on first user interaction (required by browser autoplay policy)
+document.addEventListener("click", function initOnce() {
+    initAudioCtx();
+    document.removeEventListener("click", initOnce);
+}, { once: true });
+
+// ========== Sound Functions ==========
+function playChime() {
+    initAudioCtx();
     const now = audioCtx.currentTime;
-    // Tone 1: C5
     const osc1 = audioCtx.createOscillator();
     const gain1 = audioCtx.createGain();
     osc1.connect(gain1); gain1.connect(audioCtx.destination);
@@ -145,7 +155,7 @@ function playChoreSound() {
     gain1.gain.setValueAtTime(0.2, now);
     gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
     osc1.start(now); osc1.stop(now + 0.15);
-    // Tone 2: E5
+
     const osc2 = audioCtx.createOscillator();
     const gain2 = audioCtx.createGain();
     osc2.connect(gain2); gain2.connect(audioCtx.destination);
@@ -155,14 +165,59 @@ function playChoreSound() {
     osc2.start(now + 0.15); osc2.stop(now + 0.4);
 }
 
-// Init audio on first user interaction (required by browser autoplay policy)
-document.addEventListener("click", function initOnce() {
+function playFanfare() {
     initAudioCtx();
-    document.removeEventListener("click", initOnce);
-}, { once: true });
+    const now = audioCtx.currentTime;
+    const notes = [523, 659, 784]; // C5, E5, G5
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        const start = now + i * 0.12;
+        gain.gain.setValueAtTime(0.2, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.15);
+        osc.start(start); osc.stop(start + 0.15);
+    });
+}
 
-document.body.addEventListener("chore-completed", function() {
-    playChoreSound();
+function playCoin() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc.start(now); osc.stop(now + 0.15);
+}
+
+function playXylophone() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const notes = [784, 659, 523, 392]; // G5, E5, C5, G4
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        const start = now + i * 0.1;
+        gain.gain.setValueAtTime(0.18, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.12);
+        osc.start(start); osc.stop(start + 0.12);
+    });
+}
+
+function playChoreSound() {
+    const fn = { chime: playChime, fanfare: playFanfare, coin: playCoin, xylophone: playXylophone };
+    if (fn[SOUND_PREF]) fn[SOUND_PREF]();
+}
+
+// ========== Animation Functions ==========
+function playConfetti() {
     confetti({
         particleCount: 80,
         spread: 70,
@@ -170,6 +225,62 @@ document.body.addEventListener("chore-completed", function() {
         colors: ["#B19CD9", "#8BC6A8", "#F2D07A", "#89C4D8", "#F4A7BB"],
         disableForReducedMotion: true,
     });
+}
+
+function playFireworks() {
+    confetti({
+        particleCount: 50,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0.2, y: 0.6 },
+        colors: ["#B19CD9", "#8BC6A8", "#F2D07A", "#89C4D8", "#F4A7BB"],
+        disableForReducedMotion: true,
+    });
+    setTimeout(() => {
+        confetti({
+            particleCount: 50,
+            angle: 120,
+            spread: 55,
+            origin: { x: 0.8, y: 0.6 },
+            colors: ["#B19CD9", "#8BC6A8", "#F2D07A", "#89C4D8", "#F4A7BB"],
+            disableForReducedMotion: true,
+        });
+    }, 200);
+}
+
+function playStars() {
+    confetti({
+        particleCount: 60,
+        spread: 80,
+        origin: { y: 0.6 },
+        shapes: ["star"],
+        colors: ["#FFD700", "#FFA500", "#FFEC8B", "#FFFACD"],
+        disableForReducedMotion: true,
+    });
+}
+
+function playHearts() {
+    const heartShape = confetti.shapeFromText({ text: "\u2764\uFE0F", scalar: 2 });
+    confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { y: 0.6 },
+        shapes: [heartShape],
+        scalar: 1.5,
+        colors: ["#FF69B4", "#FF1493", "#FF6B81", "#FFC0CB"],
+        disableForReducedMotion: true,
+    });
+}
+
+function playCelebration() {
+    const fn = { confetti: playConfetti, fireworks: playFireworks, stars: playStars, hearts: playHearts };
+    if (fn[ANIM_PREF]) fn[ANIM_PREF]();
+}
+
+// ========== Chore Completion Event ==========
+document.body.addEventListener("chore-completed", function() {
+    playChoreSound();
+    playCelebration();
 });
 </script>
 {% endblock %}
