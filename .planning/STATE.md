@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 Phase: 4 of 4 (Automation & Dashboard)
 Plan: 2 of 2 in current phase
 Status: Quick tasks in progress
-Last activity: 2026-04-06 -- Completed quick-003 (Use All button on timer page)
+Last activity: 2026-04-07 -- Completed quick-003 (Use All button on timer page)
 
 Progress: [████████████] 100% + quick tasks
 
@@ -88,6 +88,14 @@ Recent decisions affecting current work:
 
 None
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Streaks, quick-add, sounds, pause | 2026-04-03 | cb3ae3a | [001-streaks-quickadd-sounds-pause](./quick/001-streaks-quickadd-sounds-pause/) |
+| 002 | Fix kid chore Done button | 2026-04-03 | a628de7 | [002-fix-kid-chore-done-button](./quick/002-fix-kid-chore-done-button/) |
+| 003 | Use All button on timer page | 2026-04-07 | 62f9dd2 | [003-timer-use-all-balance](./quick/003-timer-use-all-balance/) |
+
 ### Blockers/Concerns
 
 - AdminLTE 4 integration VALIDATED in 01-01 — CDN approach works, sidebar renders correctly
@@ -96,6 +104,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-04-06
+Last session: 2026-04-07
 Stopped at: Completed quick-003-PLAN.md (Use All button on timer page)
 Resume file: None
