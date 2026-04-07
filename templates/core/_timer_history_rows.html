@@ -1,0 +1,34 @@
+{% for session in sessions %}
+<tr>
+    <td>{{ session.started_at|date:"M j" }}</td>
+    <td>{{ session.started_at|time:"g:i A" }}</td>
+    <td>
+        <span class="fw-bold">{{ session.actual_minutes }}m used</span>
+        <small class="text-muted">({{ session.requested_minutes }}m requested)</small>
+    </td>
+    <td>
+        {% if session.ended_reason == "timer_expired" %}
+        <span class="badge bg-warning-subtle text-warning-emphasis">
+            <i class="bi bi-alarm"></i> Expired
+        </span>
+        {% else %}
+        <span class="badge bg-success-subtle text-success-emphasis">
+            <i class="bi bi-stop-circle"></i> Manual
+        </span>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+{% if has_more %}
+<tr>
+    <td colspan="4" class="text-center py-3">
+        <button class="btn btn-outline-primary btn-sm"
+                hx-get="{% url 'timer_history' %}?offset={{ next_offset }}"
+                hx-target="this"
+                hx-swap="outerHTML"
+                hx-select="tbody > *">
+            Load More
+        </button>
+    </td>
+</tr>
+{% endif %}

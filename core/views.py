@@ -861,6 +861,34 @@ class TransactionHistoryView(ParentRequiredMixin, View):
         return render(request, "core/transaction_history.html", context)
 
 
+class TimerHistoryView(KidRequiredMixin, View):
+    """Timer session history with HTMX load-more pagination for kids."""
+
+    PAGE_SIZE = 20
+
+    def get(self, request):
+        offset = int(request.GET.get("offset", 0))
+
+        qs = TimerSession.objects.filter(
+            kid=request.user, ended_at__isnull=False
+        ).order_by("-started_at")
+
+        sessions = list(qs[offset:offset + self.PAGE_SIZE + 1])
+        has_more = len(sessions) > self.PAGE_SIZE
+        sessions = sessions[:self.PAGE_SIZE]
+
+        context = {
+            "sessions": sessions,
+            "has_more": has_more,
+            "next_offset": offset + self.PAGE_SIZE,
+        }
+
+        if request.headers.get("HX-Request"):
+            return render(request, "core/_timer_history_rows.html", context)
+
+        return render(request, "core/timer_history.html", context)
+
+
 class ChoreLogView(ParentRequiredMixin, View):
     """Chore completion log with kid filter and HTMX load-more pagination."""
 
