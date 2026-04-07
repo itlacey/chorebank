@@ -3,6 +3,7 @@
 from django.urls import path
 
 from core.views import (
+    BalanceBadgeView,
     ChoreLogView,
     ChoreTemplateLoadView,
     CompleteChoreView,
@@ -51,6 +52,7 @@ urlpatterns = [
     path("parent/bank/adjust/", TimeAdjustView.as_view(), name="bank_adjust"),
     path("parent/bank/history/", TransactionHistoryView.as_view(), name="bank_history"),
     # Kid chore views
+    path("kid/balance-badge/", BalanceBadgeView.as_view(), name="balance_badge"),
     path("kid/chores/", KidChoreListView.as_view(), name="kid_chore_list"),
     path("kid/chores/<int:instance_id>/complete/", CompleteChoreView.as_view(), name="complete_chore"),
     # Timer

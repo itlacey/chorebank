@@ -3,7 +3,10 @@
 
 {% block header_right %}
 <li class="nav-item">
-    <span class="nav-link">
+    <span class="nav-link"
+          hx-get="{% url 'balance_badge' %}"
+          hx-trigger="chore-completed from:body"
+          hx-swap="innerHTML">
         {% bank_balance request.user %}
     </span>
 </li>

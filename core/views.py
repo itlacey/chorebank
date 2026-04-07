@@ -20,6 +20,7 @@ TimerStopView          -- Stop timer session with ADJUST refund
 TimeAdjustView         -- Parent manual time bank adjustment
 TransactionHistoryView -- Transaction history with kid filter and HTMX pagination
 ChoreLogView           -- Chore completion log with kid filter and HTMX pagination
+BalanceBadgeView       -- HTMX partial returning updated balance badge
 """
 
 from collections import OrderedDict
@@ -537,6 +538,27 @@ class CompleteChoreView(KidRequiredMixin, View):
         )
         response["HX-Trigger"] = "chore-completed"
         return response
+
+
+class BalanceBadgeView(KidRequiredMixin, View):
+    """HTMX partial returning the current balance badge for the navbar."""
+
+    def get(self, request):
+        balance = TimeBankTransaction.get_balance(request.user)
+        display = format_balance(balance)
+
+        if balance <= 0:
+            color_class = "bg-danger-subtle text-danger-emphasis"
+        elif balance < 15:
+            color_class = "bg-warning-subtle text-warning-emphasis"
+        else:
+            color_class = "bg-success-subtle text-success-emphasis"
+
+        return render(
+            request,
+            "core/_balance_badge.html",
+            {"display": display, "color_class": color_class, "balance": balance},
+        )
 
 
 # ---------------------------------------------------------------------------
