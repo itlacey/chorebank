@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 Phase: 4 of 4 (Automation & Dashboard)
 Plan: 2 of 2 in current phase
 Status: Quick tasks in progress
-Last activity: 2026-04-07 -- Completed quick-007 (Fix chore log timezone from browser)
+Last activity: 2026-04-07 -- Completed quick-008 (Fix parent dashboard UTC timezone)
 
 Progress: [████████████] 100% + quick tasks
 
@@ -99,6 +99,7 @@ None
 | 005 | Feature wins: history, summary, streaks, ask | 2026-04-07 | 4b716da | [005-feature-wins-history-summary-streaks-ask](./quick/005-feature-wins-history-summary-streaks-ask/) |
 | 006 | Kid personalized sounds and animations | 2026-04-07 | 8bb6186 | [006-kid-personalized-sounds-animations](./quick/006-kid-personalized-sounds-animations/) |
 | 007 | Fix chore log timezone from browser | 2026-04-07 | c9eae48 | [007-fix-chore-log-timezone-from-browser](./quick/007-fix-chore-log-timezone-from-browser/) |
+| 008 | Fix parent dashboard UTC timezone | 2026-04-07 | 3aaa7a5 | [008-fix-parent-dashboard-utc-timezone](./quick/008-fix-parent-dashboard-utc-timezone/) |
 
 ### Blockers/Concerns
 
@@ -109,5 +110,5 @@ None
 ## Session Continuity
 
 Last session: 2026-04-07
-Stopped at: Completed quick-007-PLAN.md (Fix chore log timezone from browser)
+Stopped at: Completed quick-008-PLAN.md (Fix parent dashboard UTC timezone)
 Resume file: None
