@@ -138,6 +138,16 @@ document.body.addEventListener("htmx:configRequest", function(e) {
 <!-- ChoreBank JS -->
 <script src="{% static 'js/chorebank.js' %}"></script>
 
+<!-- Set browser timezone cookie for Django TimezoneMiddleware -->
+<script>
+(function() {
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && document.cookie.indexOf('browser_tz=' + tz) === -1) {
+        document.cookie = 'browser_tz=' + tz + '; path=/; max-age=31536000; SameSite=Lax';
+    }
+})();
+</script>
+
 <!-- Timezone conversion: converts UTC timestamps to local time -->
 <script>
 function convertTimesToLocal() {
