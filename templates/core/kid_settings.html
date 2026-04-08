@@ -36,6 +36,30 @@
 .btn-preview {
     flex-shrink: 0;
 }
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+}
+@media (max-width: 576px) {
+    .emoji-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.emoji-option {
+    text-align: center;
+    font-size: 2rem;
+    padding: 0.5rem;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+.emoji-option:hover {
+    background: rgba(177, 156, 217, 0.15);
+}
+.emoji-option.selected {
+    border-color: #B19CD9;
+    background: rgba(177, 156, 217, 0.15);
+}
 </style>
 {% endblock %}
 
@@ -52,6 +76,28 @@
 
 <form method="post">
 {% csrf_token %}
+
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card pref-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-emoji-smile me-2" style="color: #B19CD9;"></i>My Avatar
+                </h5>
+                <input type="hidden" name="emoji_avatar" id="emoji_avatar_input" value="{{ current_emoji }}">
+                <div class="emoji-grid">
+                    {% for emoji in emoji_choices %}
+                    <div class="emoji-option {% if current_emoji == emoji %}selected{% endif %}"
+                         onclick="selectEmoji(this, '{{ emoji }}')"
+                         role="button" tabindex="0" aria-label="Select {{ emoji }} as avatar">
+                        {{ emoji }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="row g-4 mb-4">
     <!-- Sound Preferences -->
@@ -111,6 +157,19 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+<script>
+// ========== Emoji Avatar Picker ==========
+function selectEmoji(el, emoji) {
+    document.querySelectorAll('.emoji-option.selected').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('emoji_avatar_input').value = emoji;
+}
+document.querySelectorAll('.emoji-option').forEach(el => {
+    el.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+    });
+});
+</script>
 <script>
 // ========== Web Audio Setup ==========
 let audioCtx = null;

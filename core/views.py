@@ -946,8 +946,21 @@ class TimeRequestDismissView(ParentRequiredMixin, View):
         return render(request, "core/_empty.html")
 
 
+EMOJI_CHOICES = [
+    # Animals
+    "\U0001F436", "\U0001F431", "\U0001F430", "\U0001F98A", "\U0001F43B",
+    "\U0001F984", "\U0001F98B", "\U0001F42C", "\U0001F989", "\U0001F427",
+    # Faces
+    "\U0001F600", "\U0001F929", "\U0001F60E", "\U0001F913", "\U0001F609",
+    # Space/nature
+    "\U0001F680", "\U00002B50", "\U0001F308", "\U00002600\U0000FE0F", "\U0001F319",
+    # Sports/fun
+    "\U000026BD", "\U0001F3C0", "\U0001F3B8", "\U0001F3A8", "\U0001F451",
+]
+
+
 class KidSettingsView(KidRequiredMixin, View):
-    """Kid settings page for sound and animation preferences."""
+    """Kid settings page for sound, animation, and emoji avatar preferences."""
 
     def get(self, request):
         return render(request, "core/kid_settings.html", {
@@ -955,11 +968,14 @@ class KidSettingsView(KidRequiredMixin, View):
             "animation_choices": User.AnimationPreference.choices,
             "current_sound": request.user.sound_preference,
             "current_animation": request.user.animation_preference,
+            "emoji_choices": EMOJI_CHOICES,
+            "current_emoji": request.user.emoji_avatar,
         })
 
     def post(self, request):
         sound = request.POST.get("sound_preference", "chime")
         animation = request.POST.get("animation_preference", "confetti")
+        emoji_avatar = request.POST.get("emoji_avatar", "")
 
         valid_sounds = [c[0] for c in User.SoundPreference.choices]
         valid_animations = [c[0] for c in User.AnimationPreference.choices]
@@ -971,6 +987,8 @@ class KidSettingsView(KidRequiredMixin, View):
 
         request.user.sound_preference = sound
         request.user.animation_preference = animation
+        if emoji_avatar in EMOJI_CHOICES:
+            request.user.emoji_avatar = emoji_avatar
         request.user.save()
 
         messages.success(request, "Settings saved!")
