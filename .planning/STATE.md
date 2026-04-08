@@ -102,7 +102,7 @@ None
 | 008 | Fix parent dashboard UTC timezone | 2026-04-07 | 3aaa7a5 | [008-fix-parent-dashboard-utc-timezone](./quick/008-fix-parent-dashboard-utc-timezone/) |
 | 009 | Fix timer pause bug (infinite time exploit) | 2026-04-07 | b3f0a86 | [009-fix-timer-pause-bug-infinite-time](./quick/009-fix-timer-pause-bug-infinite-time/) |
 | 010 | Kid choose emoji avatar | 2026-04-08 | 7a81ce3 | [010-kid-choose-emoji-avatar](./quick/010-kid-choose-emoji-avatar/) |
-| 011 | Add fantasy and ninja emoji options | 2026-04-08 | pending | [011-add-fantasy-ninja-emoji-options](./quick/011-add-fantasy-ninja-emoji-options/) |
+| 011 | Add fantasy and ninja emoji options | 2026-04-08 | 06478c2 | [011-add-fantasy-ninja-emoji-options](./quick/011-add-fantasy-ninja-emoji-options/) |
 
 ### Blockers/Concerns
 
