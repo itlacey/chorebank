@@ -93,7 +93,7 @@
                                     {% endif %}
                                     <small class="text-muted ms-1 text-truncate">{{ txn.note|truncatechars:25 }}</small>
                                 </div>
-                                <div>
+                                <div class="text-end">
                                     {% if txn.transaction_type == "penalty" %}
                                         <small class="text-danger fw-bold">{{ txn.amount }}m</small>
                                     {% elif txn.amount >= 0 %}
@@ -101,6 +101,9 @@
                                     {% else %}
                                         <small class="text-danger fw-bold">{{ txn.amount }}m</small>
                                     {% endif %}
+                                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                        {{ txn.created_at|date:"M j, g:i A" }}
+                                    </small>
                                 </div>
                             </div>
                             {% endfor %}
