@@ -28,6 +28,19 @@
 </head>
 <body class="layout-fixed sidebar-expand-lg">
 
+{% if user.is_authenticated and user.bg_color_1 %}
+<style>
+  body, .app-main {
+    {% if user.bg_use_gradient and user.bg_color_2 %}
+    background: linear-gradient(135deg, {{ user.bg_color_1 }}, {{ user.bg_color_2 }}) !important;
+    background-attachment: fixed !important;
+    {% else %}
+    background-color: {{ user.bg_color_1 }} !important;
+    {% endif %}
+  }
+</style>
+{% endif %}
+
 <div class="app-wrapper">
 
     <!-- ================================================================== -->

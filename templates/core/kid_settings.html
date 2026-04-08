@@ -100,6 +100,58 @@
 </div>
 
 <div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card pref-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-palette me-2" style="color: #B19CD9;"></i>Background Color
+                </h5>
+
+                <!-- Solid color picker -->
+                <div class="mb-3">
+                    <label class="form-label fw-500">Pick a color</label>
+                    <div class="d-flex align-items-center gap-3">
+                        <input type="color" id="bg_color_1_picker" class="form-control form-control-color"
+                               value="{{ bg_color_1|default:'#FAF8FC' }}"
+                               onchange="updateBgPreview()">
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                onclick="resetBgColor()">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
+                        </button>
+                    </div>
+                    <input type="hidden" name="bg_color_1" id="bg_color_1_input" value="{{ bg_color_1 }}">
+                </div>
+
+                <!-- Gradient toggle -->
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="bg_gradient_toggle"
+                           name="bg_use_gradient" {% if bg_use_gradient %}checked{% endif %}
+                           onchange="toggleGradient()">
+                    <label class="form-check-label" for="bg_gradient_toggle">Use gradient (two colors)</label>
+                </div>
+
+                <!-- Second color picker (shown when gradient enabled) -->
+                <div id="gradient_color_row" class="mb-3" style="{% if not bg_use_gradient %}display:none{% endif %}">
+                    <label class="form-label fw-500">Second color</label>
+                    <div class="d-flex align-items-center gap-3">
+                        <input type="color" id="bg_color_2_picker" class="form-control form-control-color"
+                               value="{{ bg_color_2|default:'#E8D5F5' }}"
+                               onchange="updateBgPreview()">
+                    </div>
+                    <input type="hidden" name="bg_color_2" id="bg_color_2_input" value="{{ bg_color_2 }}">
+                </div>
+
+                <!-- Live preview swatch -->
+                <div class="mt-3">
+                    <label class="form-label fw-500">Preview</label>
+                    <div id="bg_preview" style="height: 60px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
     <!-- Sound Preferences -->
     <div class="col-md-6">
         <div class="card pref-card">
@@ -169,6 +221,45 @@ document.querySelectorAll('.emoji-option').forEach(el => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
     });
 });
+</script>
+<script>
+// ========== Background Color Picker ==========
+function updateBgPreview() {
+    const color1 = document.getElementById('bg_color_1_picker').value;
+    const color2 = document.getElementById('bg_color_2_picker').value;
+    const useGradient = document.getElementById('bg_gradient_toggle').checked;
+    const preview = document.getElementById('bg_preview');
+
+    // Update hidden inputs
+    document.getElementById('bg_color_1_input').value = color1;
+    document.getElementById('bg_color_2_input').value = color2;
+
+    // Update preview
+    if (useGradient) {
+        preview.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+    } else {
+        preview.style.background = color1;
+    }
+}
+
+function toggleGradient() {
+    const row = document.getElementById('gradient_color_row');
+    const isGradient = document.getElementById('bg_gradient_toggle').checked;
+    row.style.display = isGradient ? '' : 'none';
+    updateBgPreview();
+}
+
+function resetBgColor() {
+    document.getElementById('bg_color_1_picker').value = '#FAF8FC';
+    document.getElementById('bg_color_1_input').value = '';
+    document.getElementById('bg_color_2_picker').value = '#E8D5F5';
+    document.getElementById('bg_color_2_input').value = '';
+    document.getElementById('bg_gradient_toggle').checked = false;
+    toggleGradient();
+}
+
+// Initialize preview on load
+document.addEventListener('DOMContentLoaded', updateBgPreview);
 </script>
 <script>
 // ========== Web Audio Setup ==========

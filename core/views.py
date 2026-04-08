@@ -975,9 +975,13 @@ class KidSettingsView(KidRequiredMixin, View):
             "current_animation": request.user.animation_preference,
             "emoji_choices": EMOJI_CHOICES,
             "current_emoji": request.user.emoji_avatar,
+            "bg_color_1": request.user.bg_color_1,
+            "bg_color_2": request.user.bg_color_2,
+            "bg_use_gradient": request.user.bg_use_gradient,
         })
 
     def post(self, request):
+        import re
         sound = request.POST.get("sound_preference", "chime")
         animation = request.POST.get("animation_preference", "confetti")
         emoji_avatar = request.POST.get("emoji_avatar", "")
@@ -994,6 +998,23 @@ class KidSettingsView(KidRequiredMixin, View):
         request.user.animation_preference = animation
         if emoji_avatar in EMOJI_CHOICES:
             request.user.emoji_avatar = emoji_avatar
+
+        # Background color preferences
+        hex_re = re.compile(r'^#[0-9A-Fa-f]{6}$')
+        bg_color_1 = request.POST.get("bg_color_1", "")
+        bg_color_2 = request.POST.get("bg_color_2", "")
+        bg_use_gradient = request.POST.get("bg_use_gradient") == "on"
+
+        if bg_color_1 and not hex_re.match(bg_color_1):
+            bg_color_1 = ""
+        if bg_color_2 and not hex_re.match(bg_color_2):
+            bg_color_2 = ""
+        if bg_use_gradient and not bg_color_2:
+            bg_use_gradient = False
+
+        request.user.bg_color_1 = bg_color_1
+        request.user.bg_color_2 = bg_color_2
+        request.user.bg_use_gradient = bg_use_gradient
         request.user.save()
 
         messages.success(request, "Settings saved!")

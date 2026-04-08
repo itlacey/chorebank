@@ -213,3 +213,14 @@ body {
         padding-right: 0.75rem;
     }
 }
+
+/* --------------------------------------------------------------------------
+   Color picker sizing
+   -------------------------------------------------------------------------- */
+.form-control-color {
+    width: 60px;
+    height: 40px;
+    padding: 4px;
+    border-radius: 8px;
+    cursor: pointer;
+}
