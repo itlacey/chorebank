@@ -42,6 +42,9 @@ class User(AbstractUser):
     animation_preference = models.CharField(
         max_length=20, choices=AnimationPreference.choices, default="confetti"
     )
+    bg_color_1 = models.CharField(max_length=7, default="", blank=True)
+    bg_color_2 = models.CharField(max_length=7, default="", blank=True)
+    bg_use_gradient = models.BooleanField(default=False)
 
     @property
     def is_parent(self):
