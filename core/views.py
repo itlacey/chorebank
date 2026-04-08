@@ -27,6 +27,7 @@ from collections import OrderedDict
 from datetime import timedelta
 
 import json
+import math
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -728,7 +729,7 @@ class TimerStopView(KidRequiredMixin, View):
 
         total_elapsed = (session.ended_at - session.started_at).total_seconds()
         used_seconds = total_elapsed - session.paused_seconds
-        used_minutes = int(used_seconds / 60)
+        used_minutes = math.ceil(used_seconds / 60)
         unused = session.requested_minutes - used_minutes
 
         if unused > 0:
