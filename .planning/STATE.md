@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 Phase: 4 of 4 (Automation & Dashboard)
 Plan: 2 of 2 in current phase
 Status: Quick tasks in progress
-Last activity: 2026-04-08 -- Completed quick-013 (Visual theme: dark mode, patterns, fonts, sidebar color)
+Last activity: 2026-04-08 -- Completed quick-014 (Achievement badges, titles, and unlockables)
 
 Progress: [████████████] 100% + quick tasks
 
@@ -105,6 +105,7 @@ None
 | 011 | Add fantasy and ninja emoji options | 2026-04-08 | 06478c2 | [011-add-fantasy-ninja-emoji-options](./quick/011-add-fantasy-ninja-emoji-options/) |
 | 012 | Background color picker and gradient | 2026-04-08 | 9c4b0f0 | [012-background-color-picker-gradient](./quick/012-background-color-picker-gradient/) |
 | 013 | Visual theme: dark mode, patterns, fonts, sidebar | 2026-04-08 | 376ac50 | [013-visual-theme-dark-patterns-fonts-sidebar](./quick/013-visual-theme-dark-patterns-fonts-sidebar/) |
+| 014 | Achievement badges, titles, and unlockables | 2026-04-08 | 8f52a66 | [014-achievement-badges-titles-unlockables](./quick/014-achievement-badges-titles-unlockables/) |
 
 ### Blockers/Concerns
 
@@ -115,5 +116,5 @@ None
 ## Session Continuity
 
 Last session: 2026-04-08
-Stopped at: Completed quick-013 (Visual theme: dark mode, patterns, fonts, sidebar color)
+Stopped at: Completed quick-014 (Achievement badges, titles, and unlockables)
 Resume file: None
