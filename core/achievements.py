@@ -67,15 +67,51 @@ ACHIEVEMENT_DEFINITIONS = [
     {"slug": "variety_15", "emoji": "\U0001f3A8", "title": "Renaissance Kid", "description": "Complete 15 different types of chores", "category": "variety", "criteria_type": "chore_variety", "criteria_value": 15},
     {"slug": "variety_20", "emoji": "\u267E\uFE0F", "title": "Master of All", "description": "Complete 20 different types of chores", "category": "variety", "criteria_type": "chore_variety", "criteria_value": 20},
 
-    # === UNLOCKABLE (8) - unlock patterns/fonts ===
+    # === UNLOCKABLE - Patterns (7) ===
     {"slug": "unlock_stars", "emoji": "\u2B50", "title": "Pattern: Stars", "description": "Complete 15 chores to unlock Stars pattern", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 15},
     {"slug": "unlock_polka", "emoji": "\u26AA", "title": "Pattern: Polka Dots", "description": "Get a 3-day streak to unlock Polka Dots pattern", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 3},
     {"slug": "unlock_stripes", "emoji": "\U0001f4B2", "title": "Pattern: Stripes", "description": "Earn 1 hour of time to unlock Stripes pattern", "category": "unlockable", "criteria_type": "time_earned_minutes", "criteria_value": 60},
     {"slug": "unlock_waves", "emoji": "\U0001f30A", "title": "Pattern: Waves", "description": "Complete 5 bonus chores to unlock Waves pattern", "category": "unlockable", "criteria_type": "bonus_total", "criteria_value": 5},
+    {"slug": "unlock_pattern_checkerboard", "emoji": "\U0001f3C1", "title": "Pattern: Checkerboard", "description": "Complete 40 chores to unlock Checkerboard pattern", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 40},
+    {"slug": "unlock_pattern_zigzag", "emoji": "\u26A1", "title": "Pattern: Zigzag", "description": "Complete 20 bonus chores to unlock Zigzag pattern", "category": "unlockable", "criteria_type": "bonus_total", "criteria_value": 20},
+    {"slug": "unlock_pattern_diamonds", "emoji": "\U0001f48E", "title": "Pattern: Diamonds", "description": "Use timer 30 times to unlock Diamonds pattern", "category": "unlockable", "criteria_type": "timer_sessions", "criteria_value": 30},
+
+    # === UNLOCKABLE - Fonts (4) ===
     {"slug": "unlock_rounded", "emoji": "\U0001f4AC", "title": "Font: Rounded", "description": "Get a 7-day streak to unlock Rounded font", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 7},
     {"slug": "unlock_handwritten", "emoji": "\U0001f58A\uFE0F", "title": "Font: Handwritten", "description": "Complete 50 chores to unlock Handwritten font", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 50},
     {"slug": "unlock_pixel", "emoji": "\U0001f3AE", "title": "Font: Pixel", "description": "Use timer 10 times to unlock Pixel font", "category": "unlockable", "criteria_type": "timer_sessions", "criteria_value": 10},
     {"slug": "unlock_comic", "emoji": "\U0001f4AC", "title": "Font: Comic", "description": "Earn 5 hours of time to unlock Comic font", "category": "unlockable", "criteria_type": "time_earned_minutes", "criteria_value": 300},
+
+    # === UNLOCKABLE - Sounds (8) ===
+    {"slug": "unlock_sound_fanfare", "emoji": "\U0001f3BA", "title": "Sound: Fanfare", "description": "Complete 10 chores to unlock Fanfare sound", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 10},
+    {"slug": "unlock_sound_coin", "emoji": "\U0001fA99", "title": "Sound: Coin", "description": "Get a 5-day streak to unlock Coin sound", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 5},
+    {"slug": "unlock_sound_xylophone", "emoji": "\U0001f3B5", "title": "Sound: Xylophone", "description": "Earn 2 hours of time to unlock Xylophone sound", "category": "unlockable", "criteria_type": "time_earned_minutes", "criteria_value": 120},
+    {"slug": "unlock_sound_laser", "emoji": "\U0001f4A5", "title": "Sound: Laser", "description": "Complete 75 chores to unlock Laser sound", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 75},
+    {"slug": "unlock_sound_powerup", "emoji": "\U0001f50B", "title": "Sound: Power Up", "description": "Complete 15 bonus chores to unlock Power Up sound", "category": "unlockable", "criteria_type": "bonus_total", "criteria_value": 15},
+    {"slug": "unlock_sound_levelup", "emoji": "\U0001f4C8", "title": "Sound: Level Up", "description": "Get a 14-day streak to unlock Level Up sound", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 14},
+    {"slug": "unlock_sound_applause", "emoji": "\U0001f44F", "title": "Sound: Applause", "description": "Complete 150 chores to unlock Applause sound", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 150},
+    {"slug": "unlock_sound_drumroll", "emoji": "\U0001f941", "title": "Sound: Drumroll", "description": "Use timer 25 times to unlock Drumroll sound", "category": "unlockable", "criteria_type": "timer_sessions", "criteria_value": 25},
+
+    # === UNLOCKABLE - Animations (7) ===
+    {"slug": "unlock_anim_fireworks", "emoji": "\U0001f386", "title": "Animation: Fireworks", "description": "Complete 20 chores to unlock Fireworks animation", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 20},
+    {"slug": "unlock_anim_stars", "emoji": "\U0001f31F", "title": "Animation: Stars", "description": "Get a 10-day streak to unlock Stars animation", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 10},
+    {"slug": "unlock_anim_hearts", "emoji": "\U0001f497", "title": "Animation: Hearts", "description": "Earn 3 hours of time to unlock Hearts animation", "category": "unlockable", "criteria_type": "time_earned_minutes", "criteria_value": 180},
+    {"slug": "unlock_anim_bubbles", "emoji": "\U0001fAE7", "title": "Animation: Bubbles", "description": "Complete 10 bonus chores to unlock Bubbles animation", "category": "unlockable", "criteria_type": "bonus_total", "criteria_value": 10},
+    {"slug": "unlock_anim_rainbow", "emoji": "\U0001f308", "title": "Animation: Rainbow", "description": "Complete 100 chores to unlock Rainbow animation", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 100},
+    {"slug": "unlock_anim_sparkle", "emoji": "\u2728", "title": "Animation: Sparkle", "description": "Use timer 15 times to unlock Sparkle animation", "category": "unlockable", "criteria_type": "timer_sessions", "criteria_value": 15},
+    {"slug": "unlock_anim_snow", "emoji": "\u2744\uFE0F", "title": "Animation: Snow", "description": "Get a 21-day streak to unlock Snow animation", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 21},
+
+    # === UNLOCKABLE - Emoji Groups (5) ===
+    {"slug": "unlock_emoji_faces", "emoji": "\U0001f600", "title": "Emojis: Faces", "description": "Complete 5 chores to unlock Face emojis", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 5},
+    {"slug": "unlock_emoji_space", "emoji": "\U0001f680", "title": "Emojis: Space", "description": "Earn 30 min of time to unlock Space emojis", "category": "unlockable", "criteria_type": "time_earned_minutes", "criteria_value": 30},
+    {"slug": "unlock_emoji_sports", "emoji": "\u26BD", "title": "Emojis: Sports", "description": "Complete 3 bonus chores to unlock Sports emojis", "category": "unlockable", "criteria_type": "bonus_total", "criteria_value": 3},
+    {"slug": "unlock_emoji_fantasy", "emoji": "\U0001f9D9", "title": "Emojis: Fantasy", "description": "Get a 7-day streak to unlock Fantasy emojis", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 7},
+    {"slug": "unlock_emoji_ninja", "emoji": "\U0001f977", "title": "Emojis: Ninja", "description": "Complete 200 chores to unlock Ninja emoji", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 200},
+
+    # === UNLOCKABLE - Feature Unlocks (3) ===
+    {"slug": "unlock_gradient", "emoji": "\U0001f3A8", "title": "Feature: Gradient", "description": "Complete 30 chores to unlock Gradient mode", "category": "unlockable", "criteria_type": "chore_total", "criteria_value": 30},
+    {"slug": "unlock_dark_mode", "emoji": "\U0001f319", "title": "Feature: Dark Mode", "description": "Get a 3-day streak to unlock Dark Mode", "category": "unlockable", "criteria_type": "streak_current", "criteria_value": 3},
+    {"slug": "unlock_sidebar_color", "emoji": "\U0001f3A8", "title": "Feature: Sidebar Color", "description": "Earn 1 hour of time to unlock Sidebar Color", "category": "unlockable", "criteria_type": "time_earned_minutes", "criteria_value": 60},
 ]
 
 

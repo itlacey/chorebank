@@ -27,12 +27,21 @@ class User(AbstractUser):
         FANFARE = "fanfare", "Fanfare"
         COIN = "coin", "Coin"
         XYLOPHONE = "xylophone", "Xylophone"
+        LASER = "laser", "Laser"
+        POWERUP = "powerup", "Power Up"
+        LEVELUP = "levelup", "Level Up"
+        APPLAUSE = "applause", "Applause"
+        DRUMROLL = "drumroll", "Drumroll"
 
     class AnimationPreference(models.TextChoices):
         CONFETTI = "confetti", "Confetti"
         FIREWORKS = "fireworks", "Fireworks"
         STARS = "stars", "Stars"
         HEARTS = "hearts", "Hearts"
+        BUBBLES = "bubbles", "Bubbles"
+        RAINBOW = "rainbow", "Rainbow"
+        SPARKLE = "sparkle", "Sparkle"
+        SNOW = "snow", "Snow"
 
     role = models.CharField(max_length=10, choices=Role.choices)
     emoji_avatar = models.CharField(max_length=10, default="\U0001f600")
@@ -59,6 +68,9 @@ class User(AbstractUser):
         POLKA = "polka", "Polka Dots"
         STRIPES = "stripes", "Stripes"
         WAVES = "waves", "Waves"
+        CHECKERBOARD = "checkerboard", "Checkerboard"
+        ZIGZAG = "zigzag", "Zigzag"
+        DIAMONDS = "diamonds", "Diamonds"
 
     dark_mode = models.BooleanField(default=False)
     bg_pattern = models.CharField(
