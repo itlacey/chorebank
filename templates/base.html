@@ -1,4 +1,4 @@
-{% load static django_htmx %}
+{% load static django_htmx core_tags %}
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="{% if user.is_authenticated and user.dark_mode %}dark{% else %}light{% endif %}">
 <head>
@@ -46,6 +46,13 @@
     {% else %}
     background-color: {{ user.bg_color_1 }} !important;
     {% endif %}
+  }
+  .app-content-header, .app-content-header h3,
+  .app-main > .app-content > .container-fluid > h1,
+  .app-main > .app-content > .container-fluid > h2,
+  .app-main > .app-content > .container-fluid > h3,
+  .app-main > .app-content > .container-fluid > p {
+    color: {{ user.bg_color_1|contrast_text_color }} !important;
   }
 </style>
 {% endif %}
@@ -96,23 +103,23 @@
     background-color: {{ user.sidebar_color }} !important;
   }
   .app-sidebar .nav-link {
-    color: rgba(255,255,255,0.85) !important;
+    color: {{ user.sidebar_color|contrast_text_color:"sidebar-link" }} !important;
   }
   .app-sidebar .nav-link:hover,
   .app-sidebar .nav-link.active {
-    color: #fff !important;
-    background: rgba(255,255,255,0.15) !important;
+    color: {{ user.sidebar_color|contrast_text_color:"sidebar-link-hover" }} !important;
+    background: {{ user.sidebar_color|contrast_text_color:"sidebar-hover-bg" }} !important;
   }
   .app-sidebar .sidebar-brand .brand-text {
-    color: #fff !important;
+    color: {{ user.sidebar_color|contrast_text_color:"sidebar-brand" }} !important;
   }
   .app-sidebar .btn-outline-secondary {
-    color: rgba(255,255,255,0.8) !important;
-    border-color: rgba(255,255,255,0.3) !important;
+    color: {{ user.sidebar_color|contrast_text_color:"sidebar-btn" }} !important;
+    border-color: {{ user.sidebar_color|contrast_text_color:"sidebar-btn-border" }} !important;
   }
   .app-sidebar .btn-outline-secondary:hover {
-    background: rgba(255,255,255,0.15) !important;
-    color: #fff !important;
+    background: {{ user.sidebar_color|contrast_text_color:"sidebar-hover-bg" }} !important;
+    color: {{ user.sidebar_color|contrast_text_color:"sidebar-link-hover" }} !important;
   }
 </style>
 {% endif %}
