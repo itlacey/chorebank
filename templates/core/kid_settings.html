@@ -221,10 +221,21 @@
                     <i class="bi bi-grid-3x3 me-2" style="color: #B19CD9;"></i>Background Pattern
                 </h5>
                 {% for value, label in pattern_choices %}
-                <div class="pref-option">
+                <div class="pref-option {% if value != 'none' and value not in unlocked_patterns %}opacity-50{% endif %}">
                     <input type="radio" name="bg_pattern" id="pattern_{{ value }}"
-                           value="{{ value }}" {% if bg_pattern == value %}checked{% endif %}>
-                    <label for="pattern_{{ value }}">{{ label }}</label>
+                           value="{{ value }}" {% if bg_pattern == value %}checked{% endif %}
+                           {% if value != 'none' and value not in unlocked_patterns %}disabled{% endif %}>
+                    <label for="pattern_{{ value }}">
+                        {{ label }}
+                        {% if value != 'none' and value not in unlocked_patterns %}
+                        <i class="bi bi-lock-fill text-muted ms-1"></i>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">
+                            {% if value == 'stars' %}Complete 15 chores{% elif value == 'polka' %}Get a 3-day streak{% elif value == 'stripes' %}Earn 1 hour of time{% elif value == 'waves' %}Complete 5 bonus chores{% endif %}
+                        </small>
+                        {% elif value != 'none' %}
+                        <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.85rem;"></i>
+                        {% endif %}
+                    </label>
                     {% if value != 'none' %}
                     <div class="pattern-swatch pattern-swatch-{{ value }}"></div>
                     {% endif %}
@@ -244,17 +255,29 @@
                     <i class="bi bi-fonts me-2" style="color: #B19CD9;"></i>Font Style
                 </h5>
                 {% for value, label in font_choices %}
-                <div class="pref-option">
+                <div class="pref-option {% if value != 'default' and value not in unlocked_fonts %}opacity-50{% endif %}">
                     <input type="radio" name="font_style" id="font_{{ value }}"
-                           value="{{ value }}" {% if font_style == value %}checked{% endif %}>
+                           value="{{ value }}" {% if font_style == value %}checked{% endif %}
+                           {% if value != 'default' and value not in unlocked_fonts %}disabled{% endif %}>
                     <label for="font_{{ value }}" class="font-preview-label"
                            style="font-family: {% if value == 'default' %}'Nunito'{% elif value == 'rounded' %}'Varela Round'{% elif value == 'handwritten' %}'Patrick Hand'{% elif value == 'pixel' %}'Silkscreen'{% elif value == 'comic' %}'Comic Neue'{% endif %}, sans-serif;">
                         {{ label }}
+                        {% if value != 'default' and value not in unlocked_fonts %}
+                        <i class="bi bi-lock-fill text-muted ms-1"></i>
+                        <small class="text-muted d-block" style="font-size: 0.75rem; font-family: 'Nunito', sans-serif;">
+                            {% if value == 'rounded' %}Get a 7-day streak{% elif value == 'handwritten' %}Complete 50 chores{% elif value == 'pixel' %}Use timer 10 times{% elif value == 'comic' %}Earn 5 hours of time{% endif %}
+                        </small>
+                        {% elif value != 'default' %}
+                        <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.85rem;"></i>
+                        {% endif %}
                     </label>
+                    {% if value != 'default' and value not in unlocked_fonts %}
+                    {% else %}
                     <button type="button" class="btn btn-sm btn-outline-secondary btn-preview"
                             onclick="previewFont('{% if value == 'default' %}Nunito{% elif value == 'rounded' %}Varela Round{% elif value == 'handwritten' %}Patrick Hand{% elif value == 'pixel' %}Silkscreen{% elif value == 'comic' %}Comic Neue{% endif %}')">
                         <i class="bi bi-eye"></i> Preview
                     </button>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>

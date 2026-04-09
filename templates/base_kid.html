@@ -38,6 +38,12 @@
     </a>
 </li>
 <li class="nav-item">
+    <a href="{% url 'kid_badges' %}" class="nav-link {% block nav_badges_active %}{% endblock %}">
+        <i class="nav-icon bi bi-award"></i>
+        <p>Badges</p>
+    </a>
+</li>
+<li class="nav-item">
     <a href="{% url 'kid_settings' %}" class="nav-link {% block nav_settings_active %}{% endblock %}">
         <i class="nav-icon bi bi-gear"></i>
         <p>Settings</p>

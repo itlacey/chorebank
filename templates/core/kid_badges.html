@@ -1,0 +1,203 @@
+{% extends "base_kid.html" %}
+
+{% block nav_badges_active %}active{% endblock %}
+
+{% block page_title %}My Badges{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge-progress {
+    font-size: 1.1rem;
+    color: #B19CD9;
+    font-weight: 600;
+}
+.badge-progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #eee;
+    overflow: hidden;
+    max-width: 300px;
+}
+.badge-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #B19CD9, #8BC6A8);
+    transition: width 0.5s;
+}
+.active-display {
+    background: #FAF8FC;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.active-display .active-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.active-display .active-emoji {
+    font-size: 2rem;
+}
+.active-display .active-label {
+    font-size: 0.8rem;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.active-display .active-value {
+    font-weight: 600;
+    color: #333;
+}
+.category-header {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #555;
+    border-bottom: 2px solid #B19CD9;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.badge-card {
+    background: #FAF8FC;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+.badge-card.earned {
+    background: linear-gradient(135deg, #f0e6ff, #e6f5ee);
+    box-shadow: 0 2px 8px rgba(177, 156, 217, 0.2);
+}
+.badge-card.earned:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(177, 156, 217, 0.3);
+}
+.badge-card.unearned {
+    opacity: 0.45;
+    filter: grayscale(0.8);
+}
+.badge-emoji {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+.badge-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #333;
+}
+.badge-desc {
+    font-size: 0.78rem;
+    color: #777;
+    flex-grow: 1;
+}
+.badge-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.badge-actions .btn {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+}
+.clear-btn {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Progress -->
+<div class="mb-4">
+    <div class="badge-progress mb-2">{{ earned_count }} / {{ total_count }} badges earned</div>
+    <div class="badge-progress-bar">
+        <div class="badge-progress-fill" style="width: {% widthratio earned_count total_count 100 %}%"></div>
+    </div>
+</div>
+
+<!-- Active Badge & Title Display -->
+<div class="active-display mb-4">
+    <div class="active-item">
+        <div class="active-label">Badge</div>
+        {% if active_badge %}
+        <span class="active-emoji">{{ active_badge.emoji }}</span>
+        <span class="active-value">{{ active_badge.title }}</span>
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="active_badge_slug" value="">
+            {% if active_title %}<input type="hidden" name="active_title_slug" value="{{ active_title.slug }}">{% endif %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary clear-btn">Clear</button>
+        </form>
+        {% else %}
+        <span class="text-muted">None selected</span>
+        {% endif %}
+    </div>
+    <div class="active-item ms-auto">
+        <div class="active-label">Title</div>
+        {% if active_title %}
+        <span class="active-emoji">{{ active_title.emoji }}</span>
+        <span class="active-value">{{ active_title.title }}</span>
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="active_title_slug" value="">
+            {% if active_badge %}<input type="hidden" name="active_badge_slug" value="{{ active_badge.slug }}">{% endif %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary clear-btn">Clear</button>
+        </form>
+        {% else %}
+        <span class="text-muted">None selected</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Badge Gallery by Category -->
+{% for cat_label, achievements in categories %}
+<div class="mb-4">
+    <div class="category-header">{{ cat_label }}</div>
+    <div class="row g-3">
+        {% for ach in achievements %}
+        <div class="col-6 col-md-3">
+            <div class="badge-card {% if ach.earned %}earned{% else %}unearned{% endif %}">
+                <div class="badge-emoji">{{ ach.emoji }}</div>
+                <div class="badge-title">{{ ach.title }}</div>
+                <div class="badge-desc">{{ ach.description }}</div>
+                {% if ach.earned %}
+                <div class="badge-actions">
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="active_badge_slug" value="{{ ach.slug }}">
+                        {% if active_title %}<input type="hidden" name="active_title_slug" value="{{ active_title.slug }}">{% endif %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Set Badge</button>
+                    </form>
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="active_title_slug" value="{{ ach.slug }}">
+                        {% if active_badge %}<input type="hidden" name="active_badge_slug" value="{{ active_badge.slug }}">{% endif %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">Set Title</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

@@ -42,7 +42,9 @@ from django.views.generic import TemplateView
 
 from core.forms import ChoreForm, TimeAdjustForm
 from core.mixins import KidRequiredMixin, ParentRequiredMixin
+from core.achievements import check_achievements
 from core.models import (
+    Achievement,
     Chore,
     ChoreInstance,
     ChoreTemplate,
@@ -50,6 +52,7 @@ from core.models import (
     TimeRequest,
     TimerSession,
     User,
+    UserAchievement,
     format_balance,
 )
 from core.tasks import generate_chore_instances
@@ -556,6 +559,9 @@ class CompleteChoreView(KidRequiredMixin, View):
                 chore_instance=instance,
             )
 
+        # Check and award achievements
+        check_achievements(request.user)
+
         response = render(
             request, "core/_chore_item.html", {"instance": instance}
         )
@@ -742,6 +748,10 @@ class TimerStopView(KidRequiredMixin, View):
             )
 
         new_balance = TimeBankTransaction.get_balance(request.user)
+
+        # Check and award achievements
+        check_achievements(request.user)
+
         return JsonResponse({
             "ok": True,
             "used_minutes": used_minutes,
@@ -964,10 +974,54 @@ EMOJI_CHOICES = [
 ]
 
 
+# Maps achievement slugs to pattern/font values for unlock gating
+PATTERN_UNLOCK_MAP = {
+    "unlock_stars": "stars",
+    "unlock_polka": "polka",
+    "unlock_stripes": "stripes",
+    "unlock_waves": "waves",
+}
+FONT_UNLOCK_MAP = {
+    "unlock_rounded": "rounded",
+    "unlock_handwritten": "handwritten",
+    "unlock_pixel": "pixel",
+    "unlock_comic": "comic",
+}
+PATTERN_UNLOCK_TEXT = {
+    "stars": "Complete 15 chores",
+    "polka": "Get a 3-day streak",
+    "stripes": "Earn 1 hour of time",
+    "waves": "Complete 5 bonus chores",
+}
+FONT_UNLOCK_TEXT = {
+    "rounded": "Get a 7-day streak",
+    "handwritten": "Complete 50 chores",
+    "pixel": "Use timer 10 times",
+    "comic": "Earn 5 hours of time",
+}
+
+
+def _get_unlocked(user):
+    """Return sets of unlocked pattern and font values for a user."""
+    earned_slugs = set(
+        UserAchievement.objects.filter(user=user).values_list(
+            "achievement__slug", flat=True
+        )
+    )
+    unlocked_patterns = {
+        v for k, v in PATTERN_UNLOCK_MAP.items() if k in earned_slugs
+    }
+    unlocked_fonts = {
+        v for k, v in FONT_UNLOCK_MAP.items() if k in earned_slugs
+    }
+    return unlocked_patterns, unlocked_fonts
+
+
 class KidSettingsView(KidRequiredMixin, View):
     """Kid settings page for sound, animation, and emoji avatar preferences."""
 
     def get(self, request):
+        unlocked_patterns, unlocked_fonts = _get_unlocked(request.user)
         return render(request, "core/kid_settings.html", {
             "sound_choices": User.SoundPreference.choices,
             "animation_choices": User.AnimationPreference.choices,
@@ -984,6 +1038,10 @@ class KidSettingsView(KidRequiredMixin, View):
             "font_style": request.user.font_style,
             "font_choices": User.FontStyle.choices,
             "sidebar_color": request.user.sidebar_color,
+            "unlocked_patterns": unlocked_patterns,
+            "unlocked_fonts": unlocked_fonts,
+            "pattern_unlock_text": PATTERN_UNLOCK_TEXT,
+            "font_unlock_text": FONT_UNLOCK_TEXT,
         })
 
     def post(self, request):
@@ -1025,17 +1083,22 @@ class KidSettingsView(KidRequiredMixin, View):
         # Dark mode
         request.user.dark_mode = request.POST.get("dark_mode") == "on"
 
-        # Background pattern
+        # Background pattern (enforce achievement locks)
         bg_pattern = request.POST.get("bg_pattern", "none")
         valid_patterns = [c[0] for c in User.BgPattern.choices]
         if bg_pattern not in valid_patterns:
             bg_pattern = "none"
+        unlocked_patterns, unlocked_fonts = _get_unlocked(request.user)
+        if bg_pattern != "none" and bg_pattern not in unlocked_patterns:
+            bg_pattern = "none"
         request.user.bg_pattern = bg_pattern
 
-        # Font style
+        # Font style (enforce achievement locks)
         font_style = request.POST.get("font_style", "default")
         valid_fonts = [c[0] for c in User.FontStyle.choices]
         if font_style not in valid_fonts:
+            font_style = "default"
+        if font_style != "default" and font_style not in unlocked_fonts:
             font_style = "default"
         request.user.font_style = font_style
 
@@ -1049,6 +1112,83 @@ class KidSettingsView(KidRequiredMixin, View):
 
         messages.success(request, "Settings saved!")
         return redirect("kid_settings")
+
+
+class KidBadgesView(KidRequiredMixin, View):
+    """Badge gallery page showing all achievements with earned/unearned states."""
+
+    CATEGORY_LABELS = OrderedDict([
+        ("streak", "Streaks"),
+        ("chore_count", "Chore Count"),
+        ("time_earned", "Time Earned"),
+        ("time_used", "Time Used"),
+        ("bonus", "Bonus Chores"),
+        ("speed", "Speed"),
+        ("variety", "Variety"),
+        ("unlockable", "Unlockables"),
+    ])
+
+    def get(self, request):
+        all_achievements = Achievement.objects.all()
+        earned_slugs = set(
+            UserAchievement.objects.filter(user=request.user).values_list(
+                "achievement__slug", flat=True
+            )
+        )
+
+        # Group by category with earned flag
+        categories = []
+        for cat_val, cat_label in self.CATEGORY_LABELS.items():
+            achs = []
+            for ach in all_achievements:
+                if ach.category == cat_val:
+                    ach.earned = ach.slug in earned_slugs
+                    achs.append(ach)
+            if achs:
+                categories.append((cat_label, achs))
+
+        return render(request, "core/kid_badges.html", {
+            "categories": categories,
+            "active_badge": request.user.active_badge,
+            "active_title": request.user.active_title,
+            "earned_count": len(earned_slugs),
+            "total_count": all_achievements.count(),
+        })
+
+    def post(self, request):
+        earned_slugs = set(
+            UserAchievement.objects.filter(user=request.user).values_list(
+                "achievement__slug", flat=True
+            )
+        )
+
+        # Set active badge
+        badge_slug = request.POST.get("active_badge_slug", "")
+        if badge_slug == "":
+            request.user.active_badge = None
+        else:
+            try:
+                badge = Achievement.objects.get(slug=badge_slug)
+                if badge_slug in earned_slugs:
+                    request.user.active_badge = badge
+            except Achievement.DoesNotExist:
+                pass
+
+        # Set active title
+        title_slug = request.POST.get("active_title_slug", "")
+        if title_slug == "":
+            request.user.active_title = None
+        else:
+            try:
+                title = Achievement.objects.get(slug=title_slug)
+                if title_slug in earned_slugs:
+                    request.user.active_title = title
+            except Achievement.DoesNotExist:
+                pass
+
+        request.user.save()
+        messages.success(request, "Badge and title updated!")
+        return redirect("kid_badges")
 
 
 class ChoreLogView(ParentRequiredMixin, View):
