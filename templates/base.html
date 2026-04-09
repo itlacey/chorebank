@@ -1,6 +1,6 @@
 {% load static django_htmx %}
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en" data-bs-theme="{% if user.is_authenticated and user.dark_mode %}dark{% else %}light{% endif %}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,6 +24,15 @@
     <!-- ChoreBank pastel overrides -->
     <link rel="stylesheet" href="{% static 'css/chorebank.css' %}">
 
+    {% if user.is_authenticated and user.font_style and user.font_style != 'default' %}
+    <link href="https://fonts.googleapis.com/css2?family={% if user.font_style == 'rounded' %}Varela+Round{% elif user.font_style == 'handwritten' %}Patrick+Hand{% elif user.font_style == 'pixel' %}Silkscreen{% elif user.font_style == 'comic' %}Comic+Neue:wght@400;700{% endif %}&display=swap" rel="stylesheet">
+    <style>
+    body, .sidebar-menu, .app-header, .card, .btn {
+      font-family: '{% if user.font_style == "rounded" %}Varela Round{% elif user.font_style == "handwritten" %}Patrick Hand{% elif user.font_style == "pixel" %}Silkscreen{% elif user.font_style == "comic" %}Comic Neue{% endif %}', sans-serif !important;
+    }
+    </style>
+    {% endif %}
+
     {% block extra_css %}{% endblock %}
 </head>
 <body class="layout-fixed sidebar-expand-lg">
@@ -37,6 +46,73 @@
     {% else %}
     background-color: {{ user.bg_color_1 }} !important;
     {% endif %}
+  }
+</style>
+{% endif %}
+
+{% if user.is_authenticated and user.bg_pattern and user.bg_pattern != 'none' %}
+<style>
+  .app-main { position: relative; }
+  .app-main::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+    {% if user.bg_pattern == 'stars' %}
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.8) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,0.6) 50%, transparent 50%),
+      radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,0.7) 50%, transparent 50%),
+      radial-gradient(2px 2px at 25% 80%, rgba(255,255,255,0.5) 50%, transparent 50%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.8) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 55% 15%, rgba(255,255,255,0.6) 50%, transparent 50%);
+    background-size: 200px 200px;
+    {% elif user.bg_pattern == 'polka' %}
+    background-image: radial-gradient(circle, {% if user.dark_mode %}rgba(255,255,255,0.08){% else %}rgba(0,0,0,0.08){% endif %} 8px, transparent 8px);
+    background-size: 30px 30px;
+    {% elif user.bg_pattern == 'stripes' %}
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      {% if user.dark_mode %}rgba(255,255,255,0.04){% else %}rgba(0,0,0,0.04){% endif %} 10px,
+      {% if user.dark_mode %}rgba(255,255,255,0.04){% else %}rgba(0,0,0,0.04){% endif %} 20px
+    );
+    {% elif user.bg_pattern == 'waves' %}
+    background-image:
+      repeating-radial-gradient(ellipse at 50% 100%, transparent 0px, transparent 20px, {% if user.dark_mode %}rgba(255,255,255,0.03){% else %}rgba(0,0,0,0.03){% endif %} 20px, {% if user.dark_mode %}rgba(255,255,255,0.03){% else %}rgba(0,0,0,0.03){% endif %} 25px, transparent 25px, transparent 45px);
+    background-size: 80px 40px;
+    {% endif %}
+  }
+  .app-main > * { position: relative; z-index: 1; }
+</style>
+{% endif %}
+
+{% if user.is_authenticated and user.sidebar_color %}
+<style>
+  .app-sidebar {
+    background-color: {{ user.sidebar_color }} !important;
+  }
+  .app-sidebar .nav-link {
+    color: rgba(255,255,255,0.85) !important;
+  }
+  .app-sidebar .nav-link:hover,
+  .app-sidebar .nav-link.active {
+    color: #fff !important;
+    background: rgba(255,255,255,0.15) !important;
+  }
+  .app-sidebar .sidebar-brand .brand-text {
+    color: #fff !important;
+  }
+  .app-sidebar .btn-outline-secondary {
+    color: rgba(255,255,255,0.8) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+  }
+  .app-sidebar .btn-outline-secondary:hover {
+    background: rgba(255,255,255,0.15) !important;
+    color: #fff !important;
   }
 </style>
 {% endif %}
