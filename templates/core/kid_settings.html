@@ -60,7 +60,49 @@
     border-color: #B19CD9;
     background: rgba(177, 156, 217, 0.15);
 }
+.pattern-swatch {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+.font-preview-label {
+    flex-grow: 1;
+    cursor: pointer;
+    font-weight: 500;
+    margin: 0;
+}
+.pattern-swatch-stars {
+    background-color: #2a2a4a;
+    background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.8) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,0.6) 50%, transparent 50%),
+        radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,0.7) 50%, transparent 50%),
+        radial-gradient(2px 2px at 25% 80%, rgba(255,255,255,0.5) 50%, transparent 50%),
+        radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.8) 50%, transparent 50%);
+    background-size: 50px 50px;
+}
+.pattern-swatch-polka {
+    background-image: radial-gradient(circle, rgba(0,0,0,0.15) 5px, transparent 5px);
+    background-size: 15px 15px;
+}
+.pattern-swatch-stripes {
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 5px,
+        rgba(0,0,0,0.08) 5px,
+        rgba(0,0,0,0.08) 10px
+    );
+}
+.pattern-swatch-waves {
+    background-image:
+        repeating-radial-gradient(ellipse at 50% 100%, transparent 0px, transparent 10px, rgba(0,0,0,0.06) 10px, rgba(0,0,0,0.06) 13px, transparent 13px, transparent 23px);
+    background-size: 40px 20px;
+}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Patrick+Hand&family=Silkscreen&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -146,6 +188,100 @@
                     <label class="form-label fw-500">Preview</label>
                     <div id="bg_preview" style="height: 60px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dark Mode -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card pref-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-moon-stars me-2" style="color: #B19CD9;"></i>Dark Mode
+                </h5>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="dark_mode_toggle"
+                           name="dark_mode" {% if dark_mode %}checked{% endif %}>
+                    <label class="form-check-label" for="dark_mode_toggle">Enable dark mode</label>
+                </div>
+                <small class="text-muted">Easier on the eyes at night</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Background Pattern -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card pref-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-grid-3x3 me-2" style="color: #B19CD9;"></i>Background Pattern
+                </h5>
+                {% for value, label in pattern_choices %}
+                <div class="pref-option">
+                    <input type="radio" name="bg_pattern" id="pattern_{{ value }}"
+                           value="{{ value }}" {% if bg_pattern == value %}checked{% endif %}>
+                    <label for="pattern_{{ value }}">{{ label }}</label>
+                    {% if value != 'none' %}
+                    <div class="pattern-swatch pattern-swatch-{{ value }}"></div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Font Style -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card pref-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-fonts me-2" style="color: #B19CD9;"></i>Font Style
+                </h5>
+                {% for value, label in font_choices %}
+                <div class="pref-option">
+                    <input type="radio" name="font_style" id="font_{{ value }}"
+                           value="{{ value }}" {% if font_style == value %}checked{% endif %}>
+                    <label for="font_{{ value }}" class="font-preview-label"
+                           style="font-family: {% if value == 'default' %}'Nunito'{% elif value == 'rounded' %}'Varela Round'{% elif value == 'handwritten' %}'Patrick Hand'{% elif value == 'pixel' %}'Silkscreen'{% elif value == 'comic' %}'Comic Neue'{% endif %}, sans-serif;">
+                        {{ label }}
+                    </label>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-preview"
+                            onclick="previewFont('{% if value == 'default' %}Nunito{% elif value == 'rounded' %}Varela Round{% elif value == 'handwritten' %}Patrick Hand{% elif value == 'pixel' %}Silkscreen{% elif value == 'comic' %}Comic Neue{% endif %}')">
+                        <i class="bi bi-eye"></i> Preview
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Accent Color -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card pref-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-layout-sidebar me-2" style="color: #B19CD9;"></i>Sidebar Color
+                </h5>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <input type="color" id="sidebar_color_picker" class="form-control form-control-color"
+                           value="{{ sidebar_color|default:'#7C9CBF' }}"
+                           onchange="updateSidebarPreview()">
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            onclick="resetSidebarColor()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </button>
+                </div>
+                <input type="hidden" name="sidebar_color" id="sidebar_color_input" value="{{ sidebar_color }}">
+                <div id="sidebar_color_preview" style="height: 30px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);
+                    {% if sidebar_color %}background-color: {{ sidebar_color }};{% else %}background-color: transparent;{% endif %}"></div>
             </div>
         </div>
     </div>
@@ -405,6 +541,28 @@ function playHearts() {
 function previewAnimation(type) {
     const fn = { confetti: playConfetti, fireworks: playFireworks, stars: playStars, hearts: playHearts };
     if (fn[type]) fn[type]();
+}
+
+// ========== Font Preview ==========
+function previewFont(fontFamily) {
+    const original = document.body.style.fontFamily;
+    document.body.style.fontFamily = "'" + fontFamily + "', sans-serif";
+    setTimeout(function() {
+        document.body.style.fontFamily = original;
+    }, 3000);
+}
+
+// ========== Sidebar Color Picker ==========
+function updateSidebarPreview() {
+    const color = document.getElementById('sidebar_color_picker').value;
+    document.getElementById('sidebar_color_input').value = color;
+    document.getElementById('sidebar_color_preview').style.backgroundColor = color;
+}
+
+function resetSidebarColor() {
+    document.getElementById('sidebar_color_picker').value = '#7C9CBF';
+    document.getElementById('sidebar_color_input').value = '';
+    document.getElementById('sidebar_color_preview').style.backgroundColor = 'transparent';
 }
 </script>
 {% endblock %}

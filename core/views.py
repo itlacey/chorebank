@@ -978,6 +978,12 @@ class KidSettingsView(KidRequiredMixin, View):
             "bg_color_1": request.user.bg_color_1,
             "bg_color_2": request.user.bg_color_2,
             "bg_use_gradient": request.user.bg_use_gradient,
+            "dark_mode": request.user.dark_mode,
+            "bg_pattern": request.user.bg_pattern,
+            "pattern_choices": User.BgPattern.choices,
+            "font_style": request.user.font_style,
+            "font_choices": User.FontStyle.choices,
+            "sidebar_color": request.user.sidebar_color,
         })
 
     def post(self, request):
@@ -1015,6 +1021,30 @@ class KidSettingsView(KidRequiredMixin, View):
         request.user.bg_color_1 = bg_color_1
         request.user.bg_color_2 = bg_color_2
         request.user.bg_use_gradient = bg_use_gradient
+
+        # Dark mode
+        request.user.dark_mode = request.POST.get("dark_mode") == "on"
+
+        # Background pattern
+        bg_pattern = request.POST.get("bg_pattern", "none")
+        valid_patterns = [c[0] for c in User.BgPattern.choices]
+        if bg_pattern not in valid_patterns:
+            bg_pattern = "none"
+        request.user.bg_pattern = bg_pattern
+
+        # Font style
+        font_style = request.POST.get("font_style", "default")
+        valid_fonts = [c[0] for c in User.FontStyle.choices]
+        if font_style not in valid_fonts:
+            font_style = "default"
+        request.user.font_style = font_style
+
+        # Sidebar accent color
+        sidebar_color = request.POST.get("sidebar_color", "")
+        if sidebar_color and not hex_re.match(sidebar_color):
+            sidebar_color = ""
+        request.user.sidebar_color = sidebar_color
+
         request.user.save()
 
         messages.success(request, "Settings saved!")
