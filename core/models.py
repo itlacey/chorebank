@@ -46,6 +46,29 @@ class User(AbstractUser):
     bg_color_2 = models.CharField(max_length=7, default="", blank=True)
     bg_use_gradient = models.BooleanField(default=False)
 
+    class FontStyle(models.TextChoices):
+        DEFAULT = "default", "Default (Nunito)"
+        ROUNDED = "rounded", "Rounded (Varela Round)"
+        HANDWRITTEN = "handwritten", "Handwritten (Patrick Hand)"
+        PIXEL = "pixel", "Pixel (Silkscreen)"
+        COMIC = "comic", "Comic (Comic Neue)"
+
+    class BgPattern(models.TextChoices):
+        NONE = "none", "None"
+        STARS = "stars", "Stars"
+        POLKA = "polka", "Polka Dots"
+        STRIPES = "stripes", "Stripes"
+        WAVES = "waves", "Waves"
+
+    dark_mode = models.BooleanField(default=False)
+    bg_pattern = models.CharField(
+        max_length=20, choices=BgPattern.choices, default="none"
+    )
+    font_style = models.CharField(
+        max_length=20, choices=FontStyle.choices, default="default"
+    )
+    sidebar_color = models.CharField(max_length=7, default="", blank=True)
+
     @property
     def is_parent(self):
         """Return True if user has parent role."""
