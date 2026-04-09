@@ -91,6 +91,23 @@
     background-image:
       repeating-radial-gradient(ellipse at 50% 100%, transparent 0px, transparent 20px, {% if user.dark_mode %}rgba(255,255,255,0.03){% else %}rgba(0,0,0,0.03){% endif %} 20px, {% if user.dark_mode %}rgba(255,255,255,0.03){% else %}rgba(0,0,0,0.03){% endif %} 25px, transparent 25px, transparent 45px);
     background-size: 80px 40px;
+    {% elif user.bg_pattern == 'checkerboard' %}
+    background-image: repeating-conic-gradient({% if user.dark_mode %}rgba(255,255,255,0.06){% else %}rgba(0,0,0,0.06){% endif %} 0% 25%, transparent 0% 50%);
+    background-size: 30px 30px;
+    {% elif user.bg_pattern == 'zigzag' %}
+    background-image:
+      linear-gradient(135deg, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 25%, transparent 25%),
+      linear-gradient(225deg, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 25%, transparent 25%),
+      linear-gradient(45deg, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 25%, transparent 25%),
+      linear-gradient(315deg, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 25%, transparent 25%);
+    background-size: 40px 20px;
+    background-position: 0 0, 20px 0, 20px -10px, 0px 10px;
+    {% elif user.bg_pattern == 'diamonds' %}
+    background-image:
+      linear-gradient(45deg, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 25%, transparent 25%, transparent 75%, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 75%),
+      linear-gradient(45deg, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 25%, transparent 25%, transparent 75%, {% if user.dark_mode %}rgba(255,255,255,0.05){% else %}rgba(0,0,0,0.05){% endif %} 75%);
+    background-size: 40px 40px;
+    background-position: 0 0, 20px 20px;
     {% endif %}
   }
   .app-main > * { position: relative; z-index: 1; }

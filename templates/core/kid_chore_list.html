@@ -211,8 +211,88 @@ function playXylophone() {
     });
 }
 
+function playLaser() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc.start(now); osc.stop(now + 0.3);
+}
+
+function playPowerup() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc.start(now); osc.stop(now + 0.4);
+}
+
+function playLevelup() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        const start = now + i * 0.1;
+        gain.gain.setValueAtTime(0.2, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.2);
+        osc.start(start); osc.stop(start + 0.2);
+    });
+}
+
+function playApplause() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const bufferSize = audioCtx.sampleRate * 0.6;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 0.5);
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 3000;
+    source.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+    source.start(now);
+}
+
+function playDrumroll() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    for (let i = 0; i < 12; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = "triangle";
+        osc.frequency.value = 150 + Math.random() * 30;
+        const start = now + i * 0.04;
+        gain.gain.setValueAtTime(0.12 + (i / 12) * 0.08, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.05);
+        osc.start(start); osc.stop(start + 0.05);
+    }
+}
+
 function playChoreSound() {
-    const fn = { chime: playChime, fanfare: playFanfare, coin: playCoin, xylophone: playXylophone };
+    const fn = { chime: playChime, fanfare: playFanfare, coin: playCoin, xylophone: playXylophone, laser: playLaser, powerup: playPowerup, levelup: playLevelup, applause: playApplause, drumroll: playDrumroll };
     if (fn[SOUND_PREF]) fn[SOUND_PREF]();
 }
 
@@ -272,8 +352,53 @@ function playHearts() {
     });
 }
 
+function playBubbles() {
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+            confetti({
+                particleCount: 15, spread: 30, startVelocity: 20,
+                origin: { x: 0.2 + Math.random() * 0.6, y: 0.8 },
+                colors: ["#89CFF0", "#A7D8DE", "#B0E0E6", "#87CEEB"],
+                shapes: ["circle"], gravity: 0.3, disableForReducedMotion: true,
+            });
+        }, i * 100);
+    }
+}
+
+function playRainbow() {
+    const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3"];
+    colors.forEach((color, i) => {
+        setTimeout(() => {
+            confetti({
+                particleCount: 20, angle: 90, spread: 40,
+                origin: { x: 0.1 + i * 0.12, y: 0.7 },
+                colors: [color], disableForReducedMotion: true,
+            });
+        }, i * 80);
+    });
+}
+
+function playSparkle() {
+    const sparkleShape = confetti.shapeFromText({ text: "\u2728", scalar: 2 });
+    confetti({
+        particleCount: 50, spread: 100, origin: { y: 0.6 },
+        shapes: [sparkleShape], scalar: 1.2,
+        colors: ["#FFD700", "#FFF8DC", "#FFFACD", "#F0E68C"],
+        disableForReducedMotion: true,
+    });
+}
+
+function playSnow() {
+    confetti({
+        particleCount: 60, spread: 180, startVelocity: 10,
+        origin: { y: 0 }, colors: ["#FFFFFF", "#F0F8FF", "#E6E6FA"],
+        shapes: ["circle"], gravity: 0.4, drift: 0.5, ticks: 200,
+        disableForReducedMotion: true,
+    });
+}
+
 function playCelebration() {
-    const fn = { confetti: playConfetti, fireworks: playFireworks, stars: playStars, hearts: playHearts };
+    const fn = { confetti: playConfetti, fireworks: playFireworks, stars: playStars, hearts: playHearts, bubbles: playBubbles, rainbow: playRainbow, sparkle: playSparkle, snow: playSnow };
     if (fn[ANIM_PREF]) fn[ANIM_PREF]();
 }
 

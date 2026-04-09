@@ -101,6 +101,28 @@
         repeating-radial-gradient(ellipse at 50% 100%, transparent 0px, transparent 10px, rgba(0,0,0,0.06) 10px, rgba(0,0,0,0.06) 13px, transparent 13px, transparent 23px);
     background-size: 40px 20px;
 }
+.pattern-swatch-checkerboard {
+    background-image: repeating-conic-gradient(rgba(0,0,0,0.1) 0% 25%, transparent 0% 50%);
+    background-size: 16px 16px;
+}
+.pattern-swatch-zigzag {
+    background-image: linear-gradient(135deg, rgba(0,0,0,0.08) 25%, transparent 25%),
+        linear-gradient(225deg, rgba(0,0,0,0.08) 25%, transparent 25%),
+        linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%),
+        linear-gradient(315deg, rgba(0,0,0,0.08) 25%, transparent 25%);
+    background-size: 20px 10px;
+    background-position: 0 0, 10px 0, 10px -5px, 0px 5px;
+}
+.pattern-swatch-diamonds {
+    background-image:
+        linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.08) 75%),
+        linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.08) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+}
+.emoji-option {
+    position: relative;
+}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Patrick+Hand&family=Silkscreen&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
 {% endblock %}
@@ -129,10 +151,14 @@
                 <input type="hidden" name="emoji_avatar" id="emoji_avatar_input" value="{{ current_emoji }}">
                 <div class="emoji-grid">
                     {% for emoji in emoji_choices %}
-                    <div class="emoji-option {% if current_emoji == emoji %}selected{% endif %}"
-                         onclick="selectEmoji(this, '{{ emoji }}')"
-                         role="button" tabindex="0" aria-label="Select {{ emoji }} as avatar">
+                    <div class="emoji-option {% if current_emoji == emoji %}selected{% endif %} {% if emoji not in unlocked_emojis %}opacity-50{% endif %}"
+                         {% if emoji in unlocked_emojis %}onclick="selectEmoji(this, '{{ emoji }}')"{% endif %}
+                         role="button" tabindex="0" aria-label="Select {{ emoji }} as avatar"
+                         {% if emoji not in unlocked_emojis %}title="{{ emoji_unlock_text|default_if_none:'' }}"{% endif %}>
                         {{ emoji }}
+                        {% if emoji not in unlocked_emojis %}
+                        <span style="font-size: 0.6rem; position: absolute; bottom: 2px; right: 2px;"><i class="bi bi-lock-fill"></i></span>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -165,11 +191,18 @@
                 </div>
 
                 <!-- Gradient toggle -->
-                <div class="form-check form-switch mb-3">
+                <div class="form-check form-switch mb-3 {% if 'gradient' not in unlocked_features %}opacity-50{% endif %}">
                     <input class="form-check-input" type="checkbox" id="bg_gradient_toggle"
                            name="bg_use_gradient" {% if bg_use_gradient %}checked{% endif %}
+                           {% if 'gradient' not in unlocked_features %}disabled{% endif %}
                            onchange="toggleGradient()">
-                    <label class="form-check-label" for="bg_gradient_toggle">Use gradient (two colors)</label>
+                    <label class="form-check-label" for="bg_gradient_toggle">
+                        Use gradient (two colors)
+                        {% if 'gradient' not in unlocked_features %}
+                        <i class="bi bi-lock-fill text-muted ms-1"></i>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">{{ feature_unlock_text.gradient }}</small>
+                        {% endif %}
+                    </label>
                 </div>
 
                 <!-- Second color picker (shown when gradient enabled) -->
@@ -201,12 +234,21 @@
                 <h5 class="card-title mb-3">
                     <i class="bi bi-moon-stars me-2" style="color: #B19CD9;"></i>Dark Mode
                 </h5>
-                <div class="form-check form-switch">
+                <div class="form-check form-switch {% if 'dark_mode' not in unlocked_features %}opacity-50{% endif %}">
                     <input class="form-check-input" type="checkbox" id="dark_mode_toggle"
-                           name="dark_mode" {% if dark_mode %}checked{% endif %}>
-                    <label class="form-check-label" for="dark_mode_toggle">Enable dark mode</label>
+                           name="dark_mode" {% if dark_mode %}checked{% endif %}
+                           {% if 'dark_mode' not in unlocked_features %}disabled{% endif %}>
+                    <label class="form-check-label" for="dark_mode_toggle">
+                        Enable dark mode
+                        {% if 'dark_mode' not in unlocked_features %}
+                        <i class="bi bi-lock-fill text-muted ms-1"></i>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">{{ feature_unlock_text.dark_mode }}</small>
+                        {% endif %}
+                    </label>
                 </div>
+                {% if 'dark_mode' in unlocked_features %}
                 <small class="text-muted">Easier on the eyes at night</small>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -230,7 +272,7 @@
                         {% if value != 'none' and value not in unlocked_patterns %}
                         <i class="bi bi-lock-fill text-muted ms-1"></i>
                         <small class="text-muted d-block" style="font-size: 0.75rem;">
-                            {% if value == 'stars' %}Complete 15 chores{% elif value == 'polka' %}Get a 3-day streak{% elif value == 'stripes' %}Earn 1 hour of time{% elif value == 'waves' %}Complete 5 bonus chores{% endif %}
+                            {% if value == 'stars' %}Complete 15 chores{% elif value == 'polka' %}Get a 3-day streak{% elif value == 'stripes' %}Earn 1 hour of time{% elif value == 'waves' %}Complete 5 bonus chores{% elif value == 'checkerboard' %}Complete 40 chores{% elif value == 'zigzag' %}Complete 20 bonus chores{% elif value == 'diamonds' %}Use timer 30 times{% endif %}
                         </small>
                         {% elif value != 'none' %}
                         <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.85rem;"></i>
@@ -292,7 +334,19 @@
             <div class="card-body">
                 <h5 class="card-title mb-3">
                     <i class="bi bi-layout-sidebar me-2" style="color: #B19CD9;"></i>Sidebar Color
+                    {% if 'sidebar_color' not in unlocked_features %}
+                    <i class="bi bi-lock-fill text-muted ms-1" style="font-size: 0.85rem;"></i>
+                    {% endif %}
                 </h5>
+                {% if 'sidebar_color' not in unlocked_features %}
+                <div class="opacity-50">
+                    <p class="text-muted mb-0"><small>{{ feature_unlock_text.sidebar_color }}</small></p>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <input type="color" class="form-control form-control-color" value="#7C9CBF" disabled>
+                    </div>
+                </div>
+                <input type="hidden" name="sidebar_color" id="sidebar_color_input" value="">
+                {% else %}
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <input type="color" id="sidebar_color_picker" class="form-control form-control-color"
                            value="{{ sidebar_color|default:'#7C9CBF' }}"
@@ -305,6 +359,7 @@
                 <input type="hidden" name="sidebar_color" id="sidebar_color_input" value="{{ sidebar_color }}">
                 <div id="sidebar_color_preview" style="height: 30px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);
                     {% if sidebar_color %}background-color: {{ sidebar_color }};{% else %}background-color: transparent;{% endif %}"></div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -319,14 +374,25 @@
                     <i class="bi bi-music-note-beamed me-2" style="color: #B19CD9;"></i>Completion Sound
                 </h5>
                 {% for value, label in sound_choices %}
-                <div class="pref-option">
+                <div class="pref-option {% if value != 'chime' and value not in unlocked_sounds %}opacity-50{% endif %}">
                     <input type="radio" name="sound_preference" id="sound_{{ value }}"
-                           value="{{ value }}" {% if current_sound == value %}checked{% endif %}>
-                    <label for="sound_{{ value }}">{{ label }}</label>
+                           value="{{ value }}" {% if current_sound == value %}checked{% endif %}
+                           {% if value != 'chime' and value not in unlocked_sounds %}disabled{% endif %}>
+                    <label for="sound_{{ value }}">
+                        {{ label }}
+                        {% if value != 'chime' and value not in unlocked_sounds %}
+                        <i class="bi bi-lock-fill text-muted ms-1"></i>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">{% if value == 'fanfare' %}Complete 10 chores{% elif value == 'coin' %}Get a 5-day streak{% elif value == 'xylophone' %}Earn 2 hours of time{% elif value == 'laser' %}Complete 75 chores{% elif value == 'powerup' %}Complete 15 bonus chores{% elif value == 'levelup' %}Get a 14-day streak{% elif value == 'applause' %}Complete 150 chores{% elif value == 'drumroll' %}Use timer 25 times{% endif %}</small>
+                        {% elif value != 'chime' %}
+                        <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.85rem;"></i>
+                        {% endif %}
+                    </label>
+                    {% if value == 'chime' or value in unlocked_sounds %}
                     <button type="button" class="btn btn-sm btn-outline-secondary btn-preview"
                             onclick="previewSound('{{ value }}')">
                         <i class="bi bi-play-fill"></i> Preview
                     </button>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -341,14 +407,25 @@
                     <i class="bi bi-stars me-2" style="color: #B19CD9;"></i>Completion Animation
                 </h5>
                 {% for value, label in animation_choices %}
-                <div class="pref-option">
+                <div class="pref-option {% if value != 'confetti' and value not in unlocked_animations %}opacity-50{% endif %}">
                     <input type="radio" name="animation_preference" id="anim_{{ value }}"
-                           value="{{ value }}" {% if current_animation == value %}checked{% endif %}>
-                    <label for="anim_{{ value }}">{{ label }}</label>
+                           value="{{ value }}" {% if current_animation == value %}checked{% endif %}
+                           {% if value != 'confetti' and value not in unlocked_animations %}disabled{% endif %}>
+                    <label for="anim_{{ value }}">
+                        {{ label }}
+                        {% if value != 'confetti' and value not in unlocked_animations %}
+                        <i class="bi bi-lock-fill text-muted ms-1"></i>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">{% if value == 'fireworks' %}Complete 20 chores{% elif value == 'stars' %}Get a 10-day streak{% elif value == 'hearts' %}Earn 3 hours of time{% elif value == 'bubbles' %}Complete 10 bonus chores{% elif value == 'rainbow' %}Complete 100 chores{% elif value == 'sparkle' %}Use timer 15 times{% elif value == 'snow' %}Get a 21-day streak{% endif %}</small>
+                        {% elif value != 'confetti' %}
+                        <i class="bi bi-check-circle-fill text-success ms-1" style="font-size: 0.85rem;"></i>
+                        {% endif %}
+                    </label>
+                    {% if value == 'confetti' or value in unlocked_animations %}
                     <button type="button" class="btn btn-sm btn-outline-secondary btn-preview"
                             onclick="previewAnimation('{{ value }}')">
                         <i class="bi bi-play-fill"></i> Preview
                     </button>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -500,8 +577,88 @@ function playXylophone() {
     });
 }
 
+function playLaser() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc.start(now); osc.stop(now + 0.3);
+}
+
+function playPowerup() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc.start(now); osc.stop(now + 0.4);
+}
+
+function playLevelup() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        const start = now + i * 0.1;
+        gain.gain.setValueAtTime(0.2, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.2);
+        osc.start(start); osc.stop(start + 0.2);
+    });
+}
+
+function playApplause() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    const bufferSize = audioCtx.sampleRate * 0.6;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 0.5);
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 3000;
+    source.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+    source.start(now);
+}
+
+function playDrumroll() {
+    initAudioCtx();
+    const now = audioCtx.currentTime;
+    for (let i = 0; i < 12; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = "triangle";
+        osc.frequency.value = 150 + Math.random() * 30;
+        const start = now + i * 0.04;
+        gain.gain.setValueAtTime(0.12 + (i / 12) * 0.08, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.05);
+        osc.start(start); osc.stop(start + 0.05);
+    }
+}
+
 function previewSound(type) {
-    const fn = { chime: playChime, fanfare: playFanfare, coin: playCoin, xylophone: playXylophone };
+    const fn = { chime: playChime, fanfare: playFanfare, coin: playCoin, xylophone: playXylophone, laser: playLaser, powerup: playPowerup, levelup: playLevelup, applause: playApplause, drumroll: playDrumroll };
     if (fn[type]) fn[type]();
 }
 
@@ -561,8 +718,53 @@ function playHearts() {
     });
 }
 
+function playBubbles() {
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+            confetti({
+                particleCount: 15, spread: 30, startVelocity: 20,
+                origin: { x: 0.2 + Math.random() * 0.6, y: 0.8 },
+                colors: ["#89CFF0", "#A7D8DE", "#B0E0E6", "#87CEEB"],
+                shapes: ["circle"], gravity: 0.3, disableForReducedMotion: true,
+            });
+        }, i * 100);
+    }
+}
+
+function playRainbow() {
+    const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3"];
+    colors.forEach((color, i) => {
+        setTimeout(() => {
+            confetti({
+                particleCount: 20, angle: 90, spread: 40,
+                origin: { x: 0.1 + i * 0.12, y: 0.7 },
+                colors: [color], disableForReducedMotion: true,
+            });
+        }, i * 80);
+    });
+}
+
+function playSparkle() {
+    const sparkleShape = confetti.shapeFromText({ text: "\u2728", scalar: 2 });
+    confetti({
+        particleCount: 50, spread: 100, origin: { y: 0.6 },
+        shapes: [sparkleShape], scalar: 1.2,
+        colors: ["#FFD700", "#FFF8DC", "#FFFACD", "#F0E68C"],
+        disableForReducedMotion: true,
+    });
+}
+
+function playSnow() {
+    confetti({
+        particleCount: 60, spread: 180, startVelocity: 10,
+        origin: { y: 0 }, colors: ["#FFFFFF", "#F0F8FF", "#E6E6FA"],
+        shapes: ["circle"], gravity: 0.4, drift: 0.5, ticks: 200,
+        disableForReducedMotion: true,
+    });
+}
+
 function previewAnimation(type) {
-    const fn = { confetti: playConfetti, fireworks: playFireworks, stars: playStars, hearts: playHearts };
+    const fn = { confetti: playConfetti, fireworks: playFireworks, stars: playStars, hearts: playHearts, bubbles: playBubbles, rainbow: playRainbow, sparkle: playSparkle, snow: playSnow };
     if (fn[type]) fn[type]();
 }
 

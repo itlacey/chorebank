@@ -980,6 +980,9 @@ PATTERN_UNLOCK_MAP = {
     "unlock_polka": "polka",
     "unlock_stripes": "stripes",
     "unlock_waves": "waves",
+    "unlock_pattern_checkerboard": "checkerboard",
+    "unlock_pattern_zigzag": "zigzag",
+    "unlock_pattern_diamonds": "diamonds",
 }
 FONT_UNLOCK_MAP = {
     "unlock_rounded": "rounded",
@@ -987,11 +990,44 @@ FONT_UNLOCK_MAP = {
     "unlock_pixel": "pixel",
     "unlock_comic": "comic",
 }
+SOUND_UNLOCK_MAP = {
+    "unlock_sound_fanfare": "fanfare",
+    "unlock_sound_coin": "coin",
+    "unlock_sound_xylophone": "xylophone",
+    "unlock_sound_laser": "laser",
+    "unlock_sound_powerup": "powerup",
+    "unlock_sound_levelup": "levelup",
+    "unlock_sound_applause": "applause",
+    "unlock_sound_drumroll": "drumroll",
+}
+ANIM_UNLOCK_MAP = {
+    "unlock_anim_fireworks": "fireworks",
+    "unlock_anim_stars": "stars",
+    "unlock_anim_hearts": "hearts",
+    "unlock_anim_bubbles": "bubbles",
+    "unlock_anim_rainbow": "rainbow",
+    "unlock_anim_sparkle": "sparkle",
+    "unlock_anim_snow": "snow",
+}
+
+# Emoji unlock groups: first 6 emojis (animals) are free, rest gated by group
+FREE_EMOJIS = set(EMOJI_CHOICES[0:6])
+EMOJI_UNLOCK_GROUPS = {
+    "unlock_emoji_faces": set(EMOJI_CHOICES[6:15]),    # remaining animals + faces
+    "unlock_emoji_space": set(EMOJI_CHOICES[15:20]),    # space/nature
+    "unlock_emoji_sports": set(EMOJI_CHOICES[20:25]),   # sports/fun
+    "unlock_emoji_fantasy": set(EMOJI_CHOICES[25:35]),  # fantasy
+    "unlock_emoji_ninja": set(EMOJI_CHOICES[35:]),      # ninja
+}
+
 PATTERN_UNLOCK_TEXT = {
     "stars": "Complete 15 chores",
     "polka": "Get a 3-day streak",
     "stripes": "Earn 1 hour of time",
     "waves": "Complete 5 bonus chores",
+    "checkerboard": "Complete 40 chores",
+    "zigzag": "Complete 20 bonus chores",
+    "diamonds": "Use timer 30 times",
 }
 FONT_UNLOCK_TEXT = {
     "rounded": "Get a 7-day streak",
@@ -999,10 +1035,47 @@ FONT_UNLOCK_TEXT = {
     "pixel": "Use timer 10 times",
     "comic": "Earn 5 hours of time",
 }
+SOUND_UNLOCK_TEXT = {
+    "fanfare": "Complete 10 chores",
+    "coin": "Get a 5-day streak",
+    "xylophone": "Earn 2 hours of time",
+    "laser": "Complete 75 chores",
+    "powerup": "Complete 15 bonus chores",
+    "levelup": "Get a 14-day streak",
+    "applause": "Complete 150 chores",
+    "drumroll": "Use timer 25 times",
+}
+ANIM_UNLOCK_TEXT = {
+    "fireworks": "Complete 20 chores",
+    "stars": "Get a 10-day streak",
+    "hearts": "Earn 3 hours of time",
+    "bubbles": "Complete 10 bonus chores",
+    "rainbow": "Complete 100 chores",
+    "sparkle": "Use timer 15 times",
+    "snow": "Get a 21-day streak",
+}
+FEATURE_UNLOCK_TEXT = {
+    "gradient": "Complete 30 chores",
+    "dark_mode": "Get a 3-day streak",
+    "sidebar_color": "Earn 1 hour of time",
+}
+
+# Map emoji -> unlock text for template display
+EMOJI_GROUP_UNLOCK_TEXT = {}
+for slug, emoji_set in EMOJI_UNLOCK_GROUPS.items():
+    _text = {
+        "unlock_emoji_faces": "Complete 5 chores",
+        "unlock_emoji_space": "Earn 30 min of time",
+        "unlock_emoji_sports": "Complete 3 bonus chores",
+        "unlock_emoji_fantasy": "Get a 7-day streak",
+        "unlock_emoji_ninja": "Complete 200 chores",
+    }[slug]
+    for em in emoji_set:
+        EMOJI_GROUP_UNLOCK_TEXT[em] = _text
 
 
 def _get_unlocked(user):
-    """Return sets of unlocked pattern and font values for a user."""
+    """Return dict of unlocked items across all categories for a user."""
     earned_slugs = set(
         UserAchievement.objects.filter(user=user).values_list(
             "achievement__slug", flat=True
@@ -1014,14 +1087,41 @@ def _get_unlocked(user):
     unlocked_fonts = {
         v for k, v in FONT_UNLOCK_MAP.items() if k in earned_slugs
     }
-    return unlocked_patterns, unlocked_fonts
+    unlocked_sounds = {
+        v for k, v in SOUND_UNLOCK_MAP.items() if k in earned_slugs
+    }
+    unlocked_anims = {
+        v for k, v in ANIM_UNLOCK_MAP.items() if k in earned_slugs
+    }
+
+    unlocked_emojis = set(FREE_EMOJIS)
+    for slug, emoji_set in EMOJI_UNLOCK_GROUPS.items():
+        if slug in earned_slugs:
+            unlocked_emojis |= emoji_set
+
+    unlocked_features = set()
+    if "unlock_gradient" in earned_slugs:
+        unlocked_features.add("gradient")
+    if "unlock_dark_mode" in earned_slugs:
+        unlocked_features.add("dark_mode")
+    if "unlock_sidebar_color" in earned_slugs:
+        unlocked_features.add("sidebar_color")
+
+    return {
+        "patterns": unlocked_patterns,
+        "fonts": unlocked_fonts,
+        "sounds": unlocked_sounds,
+        "animations": unlocked_anims,
+        "emojis": unlocked_emojis,
+        "features": unlocked_features,
+    }
 
 
 class KidSettingsView(KidRequiredMixin, View):
     """Kid settings page for sound, animation, and emoji avatar preferences."""
 
     def get(self, request):
-        unlocked_patterns, unlocked_fonts = _get_unlocked(request.user)
+        unlocked = _get_unlocked(request.user)
         return render(request, "core/kid_settings.html", {
             "sound_choices": User.SoundPreference.choices,
             "animation_choices": User.AnimationPreference.choices,
@@ -1038,14 +1138,24 @@ class KidSettingsView(KidRequiredMixin, View):
             "font_style": request.user.font_style,
             "font_choices": User.FontStyle.choices,
             "sidebar_color": request.user.sidebar_color,
-            "unlocked_patterns": unlocked_patterns,
-            "unlocked_fonts": unlocked_fonts,
+            "unlocked_patterns": unlocked["patterns"],
+            "unlocked_fonts": unlocked["fonts"],
+            "unlocked_sounds": unlocked["sounds"],
+            "unlocked_animations": unlocked["animations"],
+            "unlocked_emojis": unlocked["emojis"],
+            "unlocked_features": unlocked["features"],
             "pattern_unlock_text": PATTERN_UNLOCK_TEXT,
             "font_unlock_text": FONT_UNLOCK_TEXT,
+            "sound_unlock_text": SOUND_UNLOCK_TEXT,
+            "anim_unlock_text": ANIM_UNLOCK_TEXT,
+            "feature_unlock_text": FEATURE_UNLOCK_TEXT,
+            "emoji_unlock_text": EMOJI_GROUP_UNLOCK_TEXT,
         })
 
     def post(self, request):
         import re
+        unlocked = _get_unlocked(request.user)
+
         sound = request.POST.get("sound_preference", "chime")
         animation = request.POST.get("animation_preference", "confetti")
         emoji_avatar = request.POST.get("emoji_avatar", "")
@@ -1058,10 +1168,23 @@ class KidSettingsView(KidRequiredMixin, View):
         if animation not in valid_animations:
             animation = "confetti"
 
+        # Sound lock enforcement (chime is free)
+        if sound != "chime" and sound not in unlocked["sounds"]:
+            sound = "chime"
+
+        # Animation lock enforcement (confetti is free)
+        if animation != "confetti" and animation not in unlocked["animations"]:
+            animation = "confetti"
+
         request.user.sound_preference = sound
         request.user.animation_preference = animation
+
+        # Emoji lock enforcement
         if emoji_avatar in EMOJI_CHOICES:
-            request.user.emoji_avatar = emoji_avatar
+            if emoji_avatar in unlocked["emojis"]:
+                request.user.emoji_avatar = emoji_avatar
+            # else: keep current (locked emoji, don't change)
+        # else: invalid emoji, don't change
 
         # Background color preferences
         hex_re = re.compile(r'^#[0-9A-Fa-f]{6}$')
@@ -1076,20 +1199,26 @@ class KidSettingsView(KidRequiredMixin, View):
         if bg_use_gradient and not bg_color_2:
             bg_use_gradient = False
 
+        # Gradient lock enforcement
+        if bg_use_gradient and "gradient" not in unlocked["features"]:
+            bg_use_gradient = False
+
         request.user.bg_color_1 = bg_color_1
         request.user.bg_color_2 = bg_color_2
         request.user.bg_use_gradient = bg_use_gradient
 
-        # Dark mode
-        request.user.dark_mode = request.POST.get("dark_mode") == "on"
+        # Dark mode lock enforcement
+        dark_mode = request.POST.get("dark_mode") == "on"
+        if dark_mode and "dark_mode" not in unlocked["features"]:
+            dark_mode = False
+        request.user.dark_mode = dark_mode
 
         # Background pattern (enforce achievement locks)
         bg_pattern = request.POST.get("bg_pattern", "none")
         valid_patterns = [c[0] for c in User.BgPattern.choices]
         if bg_pattern not in valid_patterns:
             bg_pattern = "none"
-        unlocked_patterns, unlocked_fonts = _get_unlocked(request.user)
-        if bg_pattern != "none" and bg_pattern not in unlocked_patterns:
+        if bg_pattern != "none" and bg_pattern not in unlocked["patterns"]:
             bg_pattern = "none"
         request.user.bg_pattern = bg_pattern
 
@@ -1098,13 +1227,15 @@ class KidSettingsView(KidRequiredMixin, View):
         valid_fonts = [c[0] for c in User.FontStyle.choices]
         if font_style not in valid_fonts:
             font_style = "default"
-        if font_style != "default" and font_style not in unlocked_fonts:
+        if font_style != "default" and font_style not in unlocked["fonts"]:
             font_style = "default"
         request.user.font_style = font_style
 
-        # Sidebar accent color
+        # Sidebar color lock enforcement
         sidebar_color = request.POST.get("sidebar_color", "")
         if sidebar_color and not hex_re.match(sidebar_color):
+            sidebar_color = ""
+        if sidebar_color and "sidebar_color" not in unlocked["features"]:
             sidebar_color = ""
         request.user.sidebar_color = sidebar_color
 
