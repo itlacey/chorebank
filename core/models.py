@@ -68,6 +68,20 @@ class User(AbstractUser):
         max_length=20, choices=FontStyle.choices, default="default"
     )
     sidebar_color = models.CharField(max_length=7, default="", blank=True)
+    active_badge = models.ForeignKey(
+        "Achievement",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="badge_users",
+    )
+    active_title = models.ForeignKey(
+        "Achievement",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="title_users",
+    )
 
     @property
     def is_parent(self):
@@ -360,3 +374,50 @@ class TimerSession(models.Model):
 
     def __str__(self):
         return f"{self.kid} - {self.requested_minutes}m ({self.ended_reason})"
+
+
+class Achievement(models.Model):
+    """Badge/title that kids can earn through milestones."""
+
+    class Category(models.TextChoices):
+        STREAK = "streak", "Streaks"
+        CHORE_COUNT = "chore_count", "Chore Count"
+        TIME_EARNED = "time_earned", "Time Earned"
+        TIME_USED = "time_used", "Time Used"
+        BONUS = "bonus", "Bonus"
+        SPEED = "speed", "Speed"
+        VARIETY = "variety", "Variety"
+        UNLOCKABLE = "unlockable", "Unlockable"
+
+    slug = models.CharField(max_length=50, unique=True)
+    emoji = models.CharField(max_length=10)
+    title = models.CharField(max_length=60)
+    description = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=Category.choices)
+    criteria_type = models.CharField(max_length=30)
+    criteria_value = models.IntegerField()
+
+    class Meta:
+        ordering = ["category", "criteria_value"]
+
+    def __str__(self):
+        return f"{self.emoji} {self.title}"
+
+
+class UserAchievement(models.Model):
+    """Record of a kid earning an achievement."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="achievements_earned"
+    )
+    achievement = models.ForeignKey(
+        Achievement, on_delete=models.CASCADE, related_name="earners"
+    )
+    earned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ["user", "achievement"]
+        ordering = ["-earned_at"]
+
+    def __str__(self):
+        return f"{self.user} earned {self.achievement}"
