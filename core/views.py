@@ -32,7 +32,7 @@ import math
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
+from django.db import models as db_models, transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -1374,3 +1374,111 @@ class ChoreLogView(ParentRequiredMixin, View):
         kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
         context["kids"] = kids
         return render(request, "core/chore_log.html", context)
+
+
+class ChoreAnalyticsView(ParentRequiredMixin, TemplateView):
+    """Per-chore completion rates over 30 days with reward adjustment suggestions."""
+
+    template_name = "core/chore_analytics.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        kid_id = self.request.GET.get("kid")
+        today = localdate()
+        start_date = today - timedelta(days=30)
+
+        # Base queryset: ChoreInstance records in the 30-day window
+        qs = ChoreInstance.objects.filter(
+            due_date__gte=start_date,
+            due_date__lte=today,
+            chore__is_active=True,
+        )
+        if kid_id:
+            qs = qs.filter(assigned_to_id=kid_id)
+
+        # Aggregate per chore + kid
+        stats = (
+            qs.values(
+                "chore__id",
+                "chore__name",
+                "chore__reward_minutes",
+                "chore__chore_type",
+                "assigned_to__id",
+                "assigned_to__first_name",
+                "assigned_to__emoji_avatar",
+            )
+            .annotate(
+                total_instances=db_models.Count("id"),
+                completed_count=db_models.Count(
+                    "id",
+                    filter=db_models.Q(completed=True),
+                ),
+            )
+            .order_by("chore__name", "assigned_to__first_name")
+        )
+
+        chore_stats = []
+        total_completed = 0
+        total_instances = 0
+
+        for row in stats:
+            total = row["total_instances"]
+            done = row["completed_count"]
+            rate = round((done / total) * 100) if total > 0 else 0
+
+            # Determine suggestion
+            if rate < 30:
+                suggestion = "Consider increasing reward"
+                badge_class = "danger"
+            elif rate < 60:
+                suggestion = "Reward may need a small boost"
+                badge_class = "warning"
+            elif rate <= 85:
+                suggestion = "Reward seems well-calibrated"
+                badge_class = "success"
+            else:
+                suggestion = "Could reduce reward or increase difficulty"
+                badge_class = "info"
+
+            chore_stats.append({
+                "chore_name": row["chore__name"],
+                "chore_id": row["chore__id"],
+                "kid_name": row["assigned_to__first_name"],
+                "kid_id": row["assigned_to__id"],
+                "kid_emoji": row["assigned_to__emoji_avatar"],
+                "chore_type": row["chore__chore_type"],
+                "reward_minutes": row["chore__reward_minutes"],
+                "total_instances": total,
+                "completed_count": done,
+                "completion_rate": rate,
+                "suggestion": suggestion,
+                "badge_class": badge_class,
+            })
+
+            total_completed += done
+            total_instances += total
+
+        # Sort by completion rate ascending (worst first)
+        chore_stats.sort(key=lambda x: x["completion_rate"])
+
+        overall_rate = (
+            round((total_completed / total_instances) * 100)
+            if total_instances > 0
+            else 0
+        )
+        needs_attention = sum(1 for s in chore_stats if s["completion_rate"] < 60)
+
+        kids = User.objects.filter(role=User.Role.KID).order_by("first_name")
+        selected_kid = None
+        if kid_id:
+            selected_kid = kids.filter(pk=kid_id).first()
+
+        context.update({
+            "chore_stats": chore_stats,
+            "kids": kids,
+            "selected_kid": selected_kid,
+            "overall_completion_rate": overall_rate,
+            "needs_attention": needs_attention,
+            "total_instances": total_instances,
+        })
+        return context
