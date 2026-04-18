@@ -1,0 +1,137 @@
+{% extends "base_parent.html" %}
+
+{% block title %}Chore Analytics - ChoreBank{% endblock %}
+
+{% block nav_analytics_active %}active{% endblock %}
+
+{% block page_title %}Chore Analytics{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+
+        <!-- Kid filter -->
+        <form method="get" class="mb-4">
+            <div class="input-group" style="max-width: 320px;">
+                <select name="kid" class="form-select">
+                    <option value="">All Kids</option>
+                    {% for kid in kids %}
+                    <option value="{{ kid.pk }}" {% if selected_kid and selected_kid.pk == kid.pk %}selected{% endif %}>
+                        {{ kid.emoji_avatar }} {{ kid.first_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </form>
+
+        <!-- Overall summary card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                        <h5 class="text-secondary mb-1">Overall Completion Rate</h5>
+                        <div class="fs-1 fw-bold {% if overall_completion_rate >= 60 %}text-success{% elif overall_completion_rate >= 30 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ overall_completion_rate }}%
+                        </div>
+                        <div class="progress mt-2" style="height: 10px; max-width: 300px;">
+                            <div class="progress-bar {% if overall_completion_rate >= 85 %}bg-info{% elif overall_completion_rate >= 60 %}bg-success{% elif overall_completion_rate >= 30 %}bg-warning{% else %}bg-danger{% endif %}"
+                                 role="progressbar"
+                                 style="width: {{ overall_completion_rate }}%"
+                                 aria-valuenow="{{ overall_completion_rate }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-center text-md-end">
+                        {% if needs_attention > 0 %}
+                        <span class="badge bg-warning text-dark fs-6">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            {{ needs_attention }} chore{{ needs_attention|pluralize }} need{{ needs_attention|pluralize:",s" }} attention
+                        </span>
+                        {% else %}
+                        <span class="badge bg-success fs-6">
+                            <i class="bi bi-check-circle me-1"></i>
+                            All chores well-calibrated
+                        </span>
+                        {% endif %}
+                        <div class="text-muted mt-1">
+                            <small>Last 30 days &middot; {{ total_instances }} instance{{ total_instances|pluralize }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chore stats table -->
+        {% if chore_stats %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Chore</th>
+                                {% if not selected_kid %}<th>Kid</th>{% endif %}
+                                <th>Type</th>
+                                <th>Reward</th>
+                                <th>Completion Rate</th>
+                                <th>Suggestion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in chore_stats %}
+                            <tr>
+                                <td class="fw-semibold">{{ stat.chore_name }}</td>
+                                {% if not selected_kid %}
+                                <td>{{ stat.kid_emoji }} {{ stat.kid_name }}</td>
+                                {% endif %}
+                                <td>
+                                    {% if stat.chore_type == "required" %}
+                                    <span class="badge bg-primary">Required</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Bonus</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ stat.reward_minutes }}m</td>
+                                <td style="min-width: 180px;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar bg-{{ stat.badge_class }}"
+                                                 role="progressbar"
+                                                 style="width: {{ stat.completion_rate }}%"
+                                                 aria-valuenow="{{ stat.completion_rate }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100"></div>
+                                        </div>
+                                        <small class="fw-bold text-nowrap">{{ stat.completion_rate }}%</small>
+                                    </div>
+                                    <small class="text-muted">{{ stat.completed_count }}/{{ stat.total_instances }} done</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ stat.badge_class }}">{{ stat.suggestion }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center py-5 text-secondary">
+                <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
+                No chore data in the last 30 days.
+                {% if selected_kid %}
+                <br><small>Try selecting "All Kids" or check that chores have been assigned.</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
