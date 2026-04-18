@@ -84,7 +84,7 @@
                         <tbody>
                             {% for stat in chore_stats %}
                             <tr>
-                                <td class="fw-semibold">{{ stat.chore_name }}</td>
+                                <td class="fw-semibold"><a href="{% url 'chore_edit' stat.chore_id %}" class="text-decoration-none">{{ stat.chore_name }}</a></td>
                                 {% if not selected_kid %}
                                 <td>{{ stat.kid_emoji }} {{ stat.kid_name }}</td>
                                 {% endif %}
