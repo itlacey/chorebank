@@ -762,48 +762,39 @@ class TimerStopView(KidRequiredMixin, View):
 
 
 class TimerPauseView(KidRequiredMixin, View):
-    """Pause an active timer session."""
+    """Pause an active timer session. Idempotent: pause-while-paused is a no-op."""
 
     def post(self, request):
         session = TimerSession.objects.filter(
-            kid=request.user, ended_at__isnull=True, paused_at__isnull=True
+            kid=request.user, ended_at__isnull=True
         ).first()
         if not session:
-            return JsonResponse({"error": "No active running session"}, status=400)
+            return JsonResponse({"error": "No active session"}, status=400)
 
-        session.paused_at = timezone.now()
-        session.save()
+        if session.paused_at is None:
+            session.paused_at = timezone.now()
+            session.save()
         return JsonResponse({"ok": True, "paused": True})
 
 
 class TimerResumeView(KidRequiredMixin, View):
-    """Resume a paused timer session."""
+    """Resume a paused timer session. Idempotent: resume-while-running is a no-op."""
 
     def post(self, request):
         session = TimerSession.objects.filter(
-            kid=request.user, ended_at__isnull=True, paused_at__isnull=False
+            kid=request.user, ended_at__isnull=True
         ).first()
         if not session:
-            return JsonResponse({"error": "No paused session"}, status=400)
+            return JsonResponse({"error": "No active session"}, status=400)
 
-        now = timezone.now()
-        pause_duration = int((now - session.paused_at).total_seconds())
-        session.paused_seconds += pause_duration
-        session.paused_at = None
-        session.save()
-
-        # Recalculate end time: original end + total paused seconds
-        expected_end = session.started_at + timedelta(
-            minutes=session.requested_minutes,
-            seconds=session.paused_seconds,
-        )
-
-        return JsonResponse({
-            "ok": True,
-            "resumed": True,
-            "paused_seconds": session.paused_seconds,
-            "end_time_ms": int(expected_end.timestamp() * 1000),
-        })
+        if session.paused_at is not None:
+            now = timezone.now()
+            session.paused_seconds += int(
+                (now - session.paused_at).total_seconds()
+            )
+            session.paused_at = None
+            session.save()
+        return JsonResponse({"ok": True, "resumed": True})
 
 
 # ---------------------------------------------------------------------------
