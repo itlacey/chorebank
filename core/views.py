@@ -596,56 +596,13 @@ class BalanceBadgeView(KidRequiredMixin, View):
 
 
 class TimerPageView(KidRequiredMixin, TemplateView):
-    """Timer page with setup state and active-session resume."""
+    """Renders the timer page shell. Live state is hydrated by polling /kid/timer/state/."""
 
     template_name = "core/timer.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        user = self.request.user
-        now = timezone.now()
-
-        # Auto-close stale sessions (past expected end, still open)
-        stale_sessions = TimerSession.objects.filter(
-            kid=user, ended_at__isnull=True
-        )
-        for session in stale_sessions:
-            expected_end = session.started_at + timedelta(
-                minutes=session.requested_minutes,
-                seconds=session.paused_seconds,
-            )
-            # If currently paused, add ongoing pause time
-            if session.paused_at:
-                expected_end += now - session.paused_at
-            if expected_end < now:
-                session.ended_at = expected_end
-                session.ended_reason = "timer_expired"
-                session.save()
-
-        # Check for an active session (still running)
-        active_session = (
-            TimerSession.objects.filter(kid=user, ended_at__isnull=True)
-            .first()
-        )
-        if active_session:
-            expected_end = active_session.started_at + timedelta(
-                minutes=active_session.requested_minutes,
-                seconds=active_session.paused_seconds,
-            )
-            if active_session.paused_at:
-                # Currently paused -- add ongoing pause duration to expected end
-                expected_end += now - active_session.paused_at
-                ctx["is_paused"] = True
-                ctx["paused_seconds"] = active_session.paused_seconds + int(
-                    (now - active_session.paused_at).total_seconds()
-                )
-            if expected_end > now:
-                ctx["active_session"] = active_session
-                ctx["active_session_end_time_ms"] = int(
-                    expected_end.timestamp() * 1000
-                )
-
-        balance = TimeBankTransaction.get_balance(user)
+        balance = TimeBankTransaction.get_balance(self.request.user)
         ctx["balance"] = balance
         ctx["balance_display"] = format_balance(balance)
         return ctx
