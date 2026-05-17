@@ -31,6 +31,7 @@ from core.views import (
     TimerPauseView,
     TimerResumeView,
     TimerStartView,
+    TimerStateView,
     TimerStopView,
     TransactionHistoryView,
 )
@@ -74,4 +75,5 @@ urlpatterns = [
     path("kid/timer/stop/", TimerStopView.as_view(), name="timer_stop"),
     path("kid/timer/pause/", TimerPauseView.as_view(), name="timer_pause"),
     path("kid/timer/resume/", TimerResumeView.as_view(), name="timer_resume"),
+    path("kid/timer/state/", TimerStateView.as_view(), name="timer_state"),
 ]

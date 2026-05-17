@@ -797,6 +797,68 @@ class TimerResumeView(KidRequiredMixin, View):
         return JsonResponse({"ok": True, "resumed": True})
 
 
+class TimerStateView(KidRequiredMixin, View):
+    """Server-authoritative timer state. Polled by the frontend each second.
+
+    Returns one of: idle, running, paused, ended. Computes remaining seconds
+    from started_at / paused_at / paused_seconds / requested_minutes on every
+    request so all open tabs converge on the same view of reality.
+    """
+
+    def get(self, request):
+        balance = TimeBankTransaction.get_balance(request.user)
+        session = (
+            TimerSession.objects.filter(kid=request.user, ended_at__isnull=True)
+            .first()
+        )
+
+        if session is None:
+            return JsonResponse({
+                "status": "idle",
+                "balance": balance,
+                "balance_display": format_balance(balance),
+            })
+
+        now = timezone.now()
+
+        # Auto-expire: close out sessions whose expected_end is in the past.
+        expected_end = session.started_at + timedelta(
+            minutes=session.requested_minutes,
+            seconds=session.paused_seconds,
+        )
+        if session.paused_at is not None:
+            expected_end += now - session.paused_at
+        if expected_end <= now:
+            session.ended_at = expected_end
+            session.ended_reason = "timer_expired"
+            session.save()
+            return JsonResponse({
+                "status": "ended",
+                "session_id": session.pk,
+                "balance": balance,
+                "balance_display": format_balance(balance),
+            })
+
+        effective_paused = session.paused_seconds
+        if session.paused_at is not None:
+            effective_paused += int((now - session.paused_at).total_seconds())
+            status = "paused"
+        else:
+            status = "running"
+
+        elapsed = (now - session.started_at).total_seconds() - effective_paused
+        remaining_seconds = max(0, session.requested_minutes * 60 - int(elapsed))
+
+        return JsonResponse({
+            "status": status,
+            "session_id": session.pk,
+            "requested_minutes": session.requested_minutes,
+            "remaining_seconds": remaining_seconds,
+            "balance": balance,
+            "balance_display": format_balance(balance),
+        })
+
+
 # ---------------------------------------------------------------------------
 # Parent Bank Management
 # ---------------------------------------------------------------------------
