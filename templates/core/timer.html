@@ -95,6 +95,9 @@
       </button>
     </div>
   </div>
+    <div id="reconnecting-badge" class="position-fixed bottom-0 end-0 m-3 badge bg-secondary" style="display: none;">
+      Reconnecting…
+    </div>
 </div>
 
 <style>
@@ -116,12 +119,17 @@
 </style>
 
 <script>
-// State
-let endTimeMs = null;
-let timerInterval = null;
+// State held only for visual polish (color shift, alarm de-duplication).
+// The truth lives on the server; we only render what /state/ tells us.
+let pollInterval = null;
 let audioCtx = null;
-let totalMs = null;
-let isPaused = false;
+let totalSeconds = null;       // requested_minutes * 60, captured for color shift
+let lastStatus = "idle";
+let alarmFired = false;        // ensure alarm only plays once per ended session
+let lastSessionId = null;      // detect new sessions to reset alarmFired
+let consecutiveFailures = 0;
+
+const POLL_MS = 1000;
 
 // CSRF helper
 function getCookie(name) {
@@ -168,9 +176,10 @@ function flashScreen() {
 }
 
 // Color shift based on remaining percentage
-function updateColorShift(remainingMs) {
+function updateColorShift(remainingSeconds) {
     const overlay = document.querySelector(".timer-overlay");
-    const pct = remainingMs / totalMs;
+    if (!totalSeconds) return;
+    const pct = remainingSeconds / totalSeconds;
     if (pct > 0.25) {
         overlay.style.backgroundColor = "#C8E6D0";  // Calm green
     } else if (pct > 0.10) {
@@ -180,39 +189,88 @@ function updateColorShift(remainingMs) {
     }
 }
 
-// Display update (runs every second via setInterval)
-function updateDisplay() {
-    const remaining = Math.max(0, endTimeMs - Date.now());
-    const mins = Math.floor(remaining / 60000);
-    const secs = Math.floor((remaining % 60000) / 1000);
+// Render mm:ss
+function renderTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
     document.getElementById("timer-display").textContent =
         String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
-    updateColorShift(remaining);
-    if (remaining <= 0) {
-        clearInterval(timerInterval);
-        onTimerExpired();
+}
+
+// State dispatch
+function applyState(data) {
+    consecutiveFailures = 0;
+    document.getElementById("reconnecting-badge").style.display = "none";
+
+    if (data.session_id && data.session_id !== lastSessionId) {
+        lastSessionId = data.session_id;
+        alarmFired = false;
+        if (data.requested_minutes) {
+            totalSeconds = data.requested_minutes * 60;
+        }
+    }
+
+    const setup = document.getElementById("setup-state");
+    const overlay = document.querySelector(".timer-overlay");
+    const pauseBtn = document.getElementById("pause-btn");
+    const resumeBtn = document.getElementById("resume-btn");
+
+    if (data.status === "running") {
+        setup.style.display = "none";
+        overlay.style.display = "flex";
+        pauseBtn.style.display = "";
+        resumeBtn.style.display = "none";
+        renderTime(data.remaining_seconds);
+        updateColorShift(data.remaining_seconds);
+    } else if (data.status === "paused") {
+        setup.style.display = "none";
+        overlay.style.display = "flex";
+        pauseBtn.style.display = "none";
+        resumeBtn.style.display = "";
+        overlay.style.backgroundColor = "#D0D8E0";
+        renderTime(data.remaining_seconds);
+    } else if (data.status === "ended") {
+        // Animate expiry once, then reload to setup with refreshed balance.
+        if (!alarmFired) {
+            alarmFired = true;
+            playAlarm();
+            flashScreen();
+            setTimeout(function() { window.location.reload(); }, 2200);
+        }
+    } else {
+        // idle
+        if (lastStatus === "running" || lastStatus === "paused") {
+            // We just stopped/ended via a sibling tab — reload to refresh balance display.
+            window.location.reload();
+            return;
+        }
+        setup.style.display = "";
+        overlay.style.display = "none";
+    }
+
+    lastStatus = data.status;
+}
+
+// Single polling tick
+async function pollState() {
+    try {
+        const resp = await fetch("/kid/timer/state/", {headers: {"Accept": "application/json"}});
+        if (!resp.ok) throw new Error("non-200");
+        const data = await resp.json();
+        applyState(data);
+    } catch (err) {
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= 5) {
+            document.getElementById("reconnecting-badge").style.display = "";
+        }
     }
 }
 
-// Timer expired
-function onTimerExpired() {
-    playAlarm();
-    flashScreen();
-    // Auto-stop on server
-    fetch("/kid/timer/stop/", {
-        method: "POST",
-        headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        // Show "Time's Up" message after flash
-        setTimeout(function() {
-            document.getElementById("timer-display").textContent = "00:00";
-            const stopBtn = document.getElementById("stop-btn");
-            stopBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Done';
-            stopBtn.onclick = function() { window.location.reload(); };
-            stopBtn.classList.remove("btn-danger");
-            stopBtn.classList.add("btn-primary");
-        }, 2000);
-    });
+// Start polling and ensure first paint comes from the server, not the template
+function startPolling() {
+    if (pollInterval) return;
+    pollState();
+    pollInterval = setInterval(pollState, POLL_MS);
 }
 
 // Set minutes from preset button
@@ -227,7 +285,7 @@ async function startTimer() {
     const minutes = parseInt(minutesInput.value);
     if (!minutes || minutes < 1) return;
 
-    initAudio();  // User gesture satisfies autoplay policy
+    initAudio();
 
     const startBtn = document.getElementById("start-btn");
     startBtn.disabled = true;
@@ -246,13 +304,8 @@ async function startTimer() {
             startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Timer';
             return;
         }
-        // Switch to running state
-        endTimeMs = data.end_time_ms;
-        totalMs = minutes * 60 * 1000;
-        document.getElementById("setup-state").style.display = "none";
-        document.querySelector(".timer-overlay").style.display = "flex";
-        timerInterval = setInterval(updateDisplay, 1000);
-        updateDisplay();
+        // Let the next poll render the running state.
+        pollState();
     } catch (err) {
         alert("Network error -- try again");
         startBtn.disabled = false;
@@ -260,106 +313,61 @@ async function startTimer() {
     }
 }
 
-// Pause timer
 async function pauseTimer() {
-    clearInterval(timerInterval);
-    isPaused = true;
-    document.getElementById("pause-btn").style.display = "none";
-    document.getElementById("resume-btn").style.display = "";
-    document.querySelector(".timer-overlay").style.backgroundColor = "#D0D8E0";
-
     try {
         await fetch("/kid/timer/pause/", {
             method: "POST",
             headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
         });
-    } catch (err) {
-        // If server fails, still show paused state locally
-    }
+    } catch (err) {}
+    pollState();  // Pick up new state immediately.
 }
 
-// Resume timer
 async function resumeTimer() {
     try {
-        const resp = await fetch("/kid/timer/resume/", {
+        await fetch("/kid/timer/resume/", {
             method: "POST",
             headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
         });
-        const data = await resp.json();
-        if (resp.ok) {
-            endTimeMs = data.end_time_ms;
-            isPaused = false;
-            document.getElementById("resume-btn").style.display = "none";
-            document.getElementById("pause-btn").style.display = "";
-            timerInterval = setInterval(updateDisplay, 1000);
-            updateDisplay();
-        }
-    } catch (err) {
-        alert("Network error -- try again");
-    }
+    } catch (err) {}
+    pollState();
 }
 
-// Stop timer
 async function stopTimer() {
-    clearInterval(timerInterval);
     const stopBtn = document.getElementById("stop-btn");
     stopBtn.disabled = true;
     stopBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Stopping...';
-
     try {
         const resp = await fetch("/kid/timer/stop/", {
             method: "POST",
             headers: {"X-CSRFToken": getCookie("csrftoken"), "Content-Type": "application/json"},
         });
-        const data = await resp.json();
         if (resp.ok) {
-            window.location.reload();  // Return to setup state with updated balance
+            window.location.reload();
+            return;
         }
-    } catch (err) {
-        // Retry on failure
-        stopBtn.disabled = false;
-        stopBtn.innerHTML = '<i class="bi bi-stop-fill me-2"></i>Retry Stop';
-    }
+    } catch (err) {}
+    stopBtn.disabled = false;
+    stopBtn.innerHTML = '<i class="bi bi-stop-fill me-2"></i>Retry Stop';
 }
 
-// Enable start button when minutes are entered
+// Boot
 document.addEventListener("DOMContentLoaded", function() {
     const minutesInput = document.getElementById("minutes-input");
     if (minutesInput) {
         minutesInput.addEventListener("input", function() {
             const val = parseInt(this.value);
             const startBtn = document.getElementById("start-btn");
-            if (startBtn) {
-                startBtn.disabled = !val || val < 1;
-            }
+            if (startBtn) startBtn.disabled = !val || val < 1;
         });
     }
-
-    // Resume active session on page load
-    {% if active_session %}
-    endTimeMs = {{ active_session_end_time_ms }};
-    totalMs = {{ active_session.requested_minutes }} * 60 * 1000;
-    initAudio();
-    document.getElementById("setup-state").style.display = "none";
-    document.querySelector(".timer-overlay").style.display = "flex";
-    {% if is_paused %}
-    // Session is paused -- show paused state
-    isPaused = true;
-    document.getElementById("pause-btn").style.display = "none";
-    document.getElementById("resume-btn").style.display = "";
-    document.querySelector(".timer-overlay").style.backgroundColor = "#D0D8E0";
-    // Show frozen time (remaining = end - now, but since end was shifted by pause, it shows correct remaining)
-    updateDisplay();
-    {% else %}
-    timerInterval = setInterval(updateDisplay, 1000);
-    updateDisplay();
-    {% endif %}
-    {% endif %}
+    // Audio context cannot be created without a user gesture — defer until startTimer/active session.
+    startPolling();
 });
 
 // Warn before closing tab during active timer
 window.addEventListener("beforeunload", function(e) {
-    if (timerInterval) {
+    if (lastStatus === "running" || lastStatus === "paused") {
         e.preventDefault();
         e.returnValue = "";
     }
