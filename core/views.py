@@ -33,7 +33,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models as db_models, transaction
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.timezone import localdate
@@ -542,28 +542,40 @@ class CompleteChoreView(KidRequiredMixin, View):
             ChoreInstance,
             pk=instance_id,
             assigned_to=request.user,
-            completed=False,
         )
-        instance.completed = True
-        instance.completed_at = timezone.now()
-        instance.save()
+        cap = instance.chore.max_per_day  # None = unlimited
+        if cap is not None and instance.completion_count >= cap:
+            return HttpResponseBadRequest("Already at daily limit")
 
-        # Create EARN transaction for chore completion
-        if instance.chore.reward_minutes > 0:
-            TimeBankTransaction.objects.create(
-                kid=request.user,
-                transaction_type=TimeBankTransaction.TransactionType.EARN,
-                amount=instance.chore.reward_minutes,
-                note=f"Completed: {instance.chore.name}",
-                created_by=request.user,
-                chore_instance=instance,
+        with transaction.atomic():
+            locked = (
+                ChoreInstance.objects.select_for_update()
+                .get(pk=instance.pk)
+            )
+            if cap is not None and locked.completion_count >= cap:
+                return HttpResponseBadRequest("Already at daily limit")
+            locked.completion_count += 1
+            if not locked.completed:
+                locked.completed = True
+                locked.completed_at = timezone.now()
+            locked.save(
+                update_fields=["completion_count", "completed", "completed_at"]
             )
 
-        # Check and award achievements
+            if locked.chore.reward_minutes > 0:
+                TimeBankTransaction.objects.create(
+                    kid=request.user,
+                    transaction_type=TimeBankTransaction.TransactionType.EARN,
+                    amount=locked.chore.reward_minutes,
+                    note=f"Completed: {locked.chore.name}",
+                    created_by=request.user,
+                    chore_instance=locked,
+                )
+
         check_achievements(request.user)
 
         response = render(
-            request, "core/_chore_item.html", {"instance": instance}
+            request, "core/_chore_item.html", {"instance": locked}
         )
         response["HX-Trigger"] = "chore-completed"
         return response

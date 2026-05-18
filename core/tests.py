@@ -229,3 +229,84 @@ class PenaltyJobNullDeadlineTests(TestCase):
         applied = process_penalties()
 
         self.assertEqual(applied, 0)
+
+
+class CompleteChoreCounterTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid(balance_minutes=0)
+        self.client.force_login(self.kid)
+
+    def _make_instance(self, **chore_overrides):
+        chore = _make_chore(self.parent, **chore_overrides)
+        chore.assigned_to.add(self.kid)
+        return ChoreInstance.objects.create(
+            chore=chore,
+            assigned_to=self.kid,
+            due_date=timezone.localdate(),
+        )
+
+    def test_once_a_day_first_tap_completes(self):
+        inst = self._make_instance(max_per_day=1, reward_minutes=5)
+        resp = self.client.post(reverse("complete_chore", args=[inst.pk]))
+        self.assertEqual(resp.status_code, 200)
+        inst.refresh_from_db()
+        self.assertEqual(inst.completion_count, 1)
+        self.assertTrue(inst.completed)
+        self.assertIsNotNone(inst.completed_at)
+        self.assertEqual(TimeBankTransaction.get_balance(self.kid), 5)
+
+    def test_once_a_day_second_tap_rejected(self):
+        inst = self._make_instance(max_per_day=1, reward_minutes=5)
+        self.client.post(reverse("complete_chore", args=[inst.pk]))
+        resp = self.client.post(reverse("complete_chore", args=[inst.pk]))
+        self.assertEqual(resp.status_code, 400)
+        inst.refresh_from_db()
+        self.assertEqual(inst.completion_count, 1)
+        self.assertEqual(TimeBankTransaction.get_balance(self.kid), 5)
+
+    def test_capped_chore_three_taps_then_rejected(self):
+        inst = self._make_instance(max_per_day=3, reward_minutes=2)
+        for _ in range(3):
+            resp = self.client.post(reverse("complete_chore", args=[inst.pk]))
+            self.assertEqual(resp.status_code, 200)
+        resp = self.client.post(reverse("complete_chore", args=[inst.pk]))
+        self.assertEqual(resp.status_code, 400)
+        inst.refresh_from_db()
+        self.assertEqual(inst.completion_count, 3)
+        self.assertEqual(TimeBankTransaction.get_balance(self.kid), 6)
+        # 3 EARN transactions
+        earns = TimeBankTransaction.objects.filter(
+            kid=self.kid, transaction_type="earn"
+        )
+        self.assertEqual(earns.count(), 3)
+
+    def test_unlimited_chore_five_taps_all_accepted(self):
+        inst = self._make_instance(max_per_day=None, reward_minutes=1)
+        for _ in range(5):
+            resp = self.client.post(reverse("complete_chore", args=[inst.pk]))
+            self.assertEqual(resp.status_code, 200)
+        inst.refresh_from_db()
+        self.assertEqual(inst.completion_count, 5)
+        self.assertEqual(TimeBankTransaction.get_balance(self.kid), 5)
+
+    def test_completed_at_set_on_first_tap_only(self):
+        inst = self._make_instance(max_per_day=3, reward_minutes=2)
+        self.client.post(reverse("complete_chore", args=[inst.pk]))
+        inst.refresh_from_db()
+        first_completed_at = inst.completed_at
+        self.client.post(reverse("complete_chore", args=[inst.pk]))
+        inst.refresh_from_db()
+        self.assertEqual(inst.completed_at, first_completed_at)
+
+    def test_zero_reward_chore_increments_count_no_transaction(self):
+        inst = self._make_instance(
+            max_per_day=2,
+            reward_minutes=0,
+            chore_type=Chore.ChoreType.BONUS,
+            penalty_minutes=0,
+        )
+        self.client.post(reverse("complete_chore", args=[inst.pk]))
+        inst.refresh_from_db()
+        self.assertEqual(inst.completion_count, 1)
+        self.assertEqual(TimeBankTransaction.objects.filter(kid=self.kid).count(), 0)
