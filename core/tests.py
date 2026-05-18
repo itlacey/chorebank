@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Chore, ChoreInstance, TimeBankTransaction, TimerSession, User
+from core.tasks import process_penalties
 
 
 def _make_kid(balance_minutes=60):
@@ -179,3 +180,52 @@ class MultiCompletionSchemaTests(TestCase):
             chore=chore, assigned_to=self.kid, due_date=date(2026, 1, 1)
         )
         self.assertEqual(inst.completion_count, 0)
+
+
+class PenaltyJobNullDeadlineTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid(balance_minutes=0)
+
+    def test_required_chore_with_no_deadline_penalized_after_midnight(self):
+        chore = _make_chore(
+            self.parent,
+            chore_type=Chore.ChoreType.REQUIRED,
+            penalty_minutes=10,
+            deadline_time=None,
+        )
+        chore.assigned_to.add(self.kid)
+        yesterday = timezone.localdate() - timedelta(days=1)
+        ChoreInstance.objects.create(
+            chore=chore, assigned_to=self.kid, due_date=yesterday
+        )
+
+        applied = process_penalties()
+
+        self.assertEqual(applied, 1)
+        balance = TimeBankTransaction.get_balance(self.kid)
+        self.assertEqual(balance, -10)
+
+    def test_partial_multi_completion_not_penalized(self):
+        chore = _make_chore(
+            self.parent,
+            chore_type=Chore.ChoreType.REQUIRED,
+            penalty_minutes=10,
+            max_per_day=3,
+            deadline_time=None,
+        )
+        chore.assigned_to.add(self.kid)
+        yesterday = timezone.localdate() - timedelta(days=1)
+        # 1/3 done — completed is True, so penalty job's completed=False filter excludes it
+        ChoreInstance.objects.create(
+            chore=chore,
+            assigned_to=self.kid,
+            due_date=yesterday,
+            completion_count=1,
+            completed=True,
+            completed_at=timezone.now() - timedelta(days=1),
+        )
+
+        applied = process_penalties()
+
+        self.assertEqual(applied, 0)

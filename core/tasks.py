@@ -6,7 +6,7 @@ process_penalties runs every 5 minutes to penalize missed required chores.
 """
 
 import calendar
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from django.db import transaction
 from django.utils import timezone
@@ -106,10 +106,10 @@ def process_penalties(target_date=None):
 
     penalty_count = 0
     for instance in instances:
-        # Combine due_date + deadline_time into a timezone-aware datetime
-        deadline_naive = datetime.combine(
-            instance.due_date, instance.chore.deadline_time
-        )
+        # Combine due_date + deadline_time into a timezone-aware datetime.
+        # A missing deadline is treated as end-of-day for penalty purposes.
+        deadline_time_val = instance.chore.deadline_time or time(23, 59, 59)
+        deadline_naive = datetime.combine(instance.due_date, deadline_time_val)
         deadline_aware = timezone.make_aware(deadline_naive)
 
         if now <= deadline_aware:
