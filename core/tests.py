@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from core.forms import ChoreForm
 from core.models import Chore, ChoreInstance, TimeBankTransaction, TimerSession, User
 from core.tasks import process_penalties
 
@@ -310,3 +311,93 @@ class CompleteChoreCounterTests(TestCase):
         inst.refresh_from_db()
         self.assertEqual(inst.completion_count, 1)
         self.assertEqual(TimeBankTransaction.objects.filter(kid=self.kid).count(), 0)
+
+
+class ChoreFormCompletionLimitTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid(balance_minutes=0)
+
+    def _base_data(self, **overrides):
+        data = dict(
+            name="Test",
+            chore_type="required",
+            reward_minutes="5",
+            penalty_minutes="10",
+            time_of_day="morning",
+            deadline_time="09:00",
+            assigned_to=[str(self.kid.pk)],
+            recurrence_type="daily",
+            completion_limit="once",
+            max_per_day_value="",
+        )
+        data.update(overrides)
+        return data
+
+    def test_once_saves_max_per_day_1(self):
+        form = ChoreForm(data=self._base_data(completion_limit="once"))
+        self.assertTrue(form.is_valid(), form.errors)
+        chore = form.save(commit=False)
+        chore.created_by = self.parent
+        chore.save()
+        form.save_m2m()
+        self.assertEqual(chore.max_per_day, 1)
+
+    def test_multiple_with_3_saves_max_per_day_3(self):
+        form = ChoreForm(
+            data=self._base_data(completion_limit="multiple", max_per_day_value="3")
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        chore = form.save(commit=False)
+        chore.created_by = self.parent
+        chore.save()
+        form.save_m2m()
+        self.assertEqual(chore.max_per_day, 3)
+
+    def test_unlimited_saves_max_per_day_null(self):
+        form = ChoreForm(data=self._base_data(completion_limit="unlimited"))
+        self.assertTrue(form.is_valid(), form.errors)
+        chore = form.save(commit=False)
+        chore.created_by = self.parent
+        chore.save()
+        form.save_m2m()
+        self.assertIsNone(chore.max_per_day)
+
+    def test_multiple_with_no_value_is_invalid(self):
+        form = ChoreForm(
+            data=self._base_data(completion_limit="multiple", max_per_day_value="")
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("max_per_day_value", form.errors)
+
+    def test_multiple_with_1_is_invalid(self):
+        form = ChoreForm(
+            data=self._base_data(completion_limit="multiple", max_per_day_value="1")
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("max_per_day_value", form.errors)
+
+    def test_deadline_time_optional(self):
+        form = ChoreForm(data=self._base_data(deadline_time=""))
+        self.assertTrue(form.is_valid(), form.errors)
+        chore = form.save(commit=False)
+        chore.created_by = self.parent
+        chore.save()
+        form.save_m2m()
+        self.assertIsNone(chore.deadline_time)
+
+    def test_editing_unlimited_chore_initializes_radio(self):
+        chore = _make_chore(self.parent, max_per_day=None)
+        form = ChoreForm(instance=chore)
+        self.assertEqual(form.fields["completion_limit"].initial, "unlimited")
+
+    def test_editing_multiple_chore_initializes_radio_and_value(self):
+        chore = _make_chore(self.parent, max_per_day=5)
+        form = ChoreForm(instance=chore)
+        self.assertEqual(form.fields["completion_limit"].initial, "multiple")
+        self.assertEqual(form.fields["max_per_day_value"].initial, 5)
+
+    def test_editing_once_chore_initializes_radio(self):
+        chore = _make_chore(self.parent, max_per_day=1)
+        form = ChoreForm(instance=chore)
+        self.assertEqual(form.fields["completion_limit"].initial, "once")

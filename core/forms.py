@@ -13,6 +13,27 @@ from core.models import Chore, User
 class ChoreForm(forms.ModelForm):
     """Form for parent chore creation and editing."""
 
+    LIMIT_ONCE = "once"
+    LIMIT_MULTIPLE = "multiple"
+    LIMIT_UNLIMITED = "unlimited"
+    LIMIT_CHOICES = [
+        (LIMIT_ONCE, "Once a day"),
+        (LIMIT_MULTIPLE, "Multiple times per day"),
+        (LIMIT_UNLIMITED, "Unlimited"),
+    ]
+
+    completion_limit = forms.ChoiceField(
+        choices=LIMIT_CHOICES,
+        widget=forms.RadioSelect,
+        initial=LIMIT_ONCE,
+    )
+    max_per_day_value = forms.IntegerField(
+        min_value=2,
+        required=False,
+        initial=2,
+        widget=forms.NumberInput(attrs={"min": 2}),
+    )
+
     class Meta:
         model = Chore
         fields = [
@@ -44,10 +65,24 @@ class ChoreForm(forms.ModelForm):
         ).order_by("first_name")
         # Make penalty_minutes not required at form level (validation in clean)
         self.fields["penalty_minutes"].required = False
+        # Deadline is now optional
+        self.fields["deadline_time"].required = False
         # Recurrence sub-fields are conditionally required
         self.fields["recurrence_days"].required = False
         self.fields["recurrence_interval"].required = False
         self.fields["one_off_date"].required = False
+
+        # When editing, derive initial values for synthetic fields
+        # from the model's max_per_day.
+        if self.instance and self.instance.pk is not None:
+            mpd = self.instance.max_per_day
+            if mpd is None:
+                self.fields["completion_limit"].initial = self.LIMIT_UNLIMITED
+            elif mpd == 1:
+                self.fields["completion_limit"].initial = self.LIMIT_ONCE
+            else:
+                self.fields["completion_limit"].initial = self.LIMIT_MULTIPLE
+                self.fields["max_per_day_value"].initial = mpd
 
     def clean(self):
         cleaned = super().clean()
@@ -91,7 +126,29 @@ class ChoreForm(forms.ModelForm):
                     "Weekly recurrence requires at least one day selected.",
                 )
 
+        # Completion limit: validate the synthetic pair.
+        limit = cleaned.get("completion_limit")
+        if limit == self.LIMIT_MULTIPLE:
+            value = cleaned.get("max_per_day_value")
+            if not value or value < 2:
+                self.add_error(
+                    "max_per_day_value",
+                    "Choose a number of 2 or more when allowing multiple completions.",
+                )
+
         return cleaned
+
+    def save(self, commit=True):
+        # Translate the synthetic completion_limit / max_per_day_value
+        # pair into the model's max_per_day field.
+        limit = self.cleaned_data.get("completion_limit")
+        if limit == self.LIMIT_ONCE:
+            self.instance.max_per_day = 1
+        elif limit == self.LIMIT_UNLIMITED:
+            self.instance.max_per_day = None
+        elif limit == self.LIMIT_MULTIPLE:
+            self.instance.max_per_day = self.cleaned_data.get("max_per_day_value")
+        return super().save(commit=commit)
 
 
 class TimeAdjustForm(forms.Form):
