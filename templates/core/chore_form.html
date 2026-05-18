@@ -150,7 +150,7 @@
                         <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
 
-                        <div class="mt-2 {% if form.completion_limit.value != 'multiple' %}d-none{% endif %}" id="max-per-day-group" style="max-width: 240px;">
+                        <div class="mt-2" id="max-per-day-group" style="max-width: 240px; {% if form.completion_limit.value != 'multiple' %}display: none;{% endif %}">
                             <label for="{{ form.max_per_day_value.id_for_label }}" class="form-label small">Max times per day</label>
                             <input type="number" name="max_per_day_value" id="{{ form.max_per_day_value.id_for_label }}"
                                    value="{{ form.max_per_day_value.value|default_if_none:'' }}"
@@ -279,11 +279,7 @@
     function toggleMaxPerDay() {
         const selected = document.querySelector('input[name="completion_limit"]:checked');
         const val = selected ? selected.value : '';
-        if (val === 'multiple') {
-            maxPerDayGroup.classList.remove('d-none');
-        } else {
-            maxPerDayGroup.classList.add('d-none');
-        }
+        maxPerDayGroup.style.display = (val === 'multiple') ? '' : 'none';
     }
     completionLimitRadios.forEach(r => r.addEventListener('change', toggleMaxPerDay));
     toggleMaxPerDay();
