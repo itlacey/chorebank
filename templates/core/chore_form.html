@@ -113,7 +113,7 @@
                             {% endfor %}
                         </div>
                         <div class="col-sm-6">
-                            <label for="{{ form.deadline_time.id_for_label }}" class="form-label fw-semibold">Deadline Time</label>
+                            <label for="{{ form.deadline_time.id_for_label }}" class="form-label fw-semibold">Deadline Time <span class="text-muted fw-normal">(optional)</span></label>
                             <input type="time" name="deadline_time" id="{{ form.deadline_time.id_for_label }}"
                                    value="{{ form.deadline_time.value|default_if_none:'' }}"
                                    class="form-control {% if form.deadline_time.errors %}is-invalid{% endif %}">
@@ -135,6 +135,31 @@
                         {% for error in form.assigned_to.errors %}
                         <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
+                    </div>
+
+                    <!-- Row 5b: Completion limit -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-block">How many times per day?</label>
+                        {% for radio in form.completion_limit %}
+                        <div class="form-check form-check-inline">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.completion_limit.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+
+                        <div class="mt-2 {% if form.completion_limit.value != 'multiple' %}d-none{% endif %}" id="max-per-day-group" style="max-width: 240px;">
+                            <label for="{{ form.max_per_day_value.id_for_label }}" class="form-label small">Max times per day</label>
+                            <input type="number" name="max_per_day_value" id="{{ form.max_per_day_value.id_for_label }}"
+                                   value="{{ form.max_per_day_value.value|default_if_none:'' }}"
+                                   class="form-control {% if form.max_per_day_value.errors %}is-invalid{% endif %}"
+                                   min="2">
+                            {% for error in form.max_per_day_value.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
                     </div>
 
                     <!-- Row 6: Recurrence Type (radio) -->
@@ -246,6 +271,22 @@
     }
     recurrenceRadios.forEach(r => r.addEventListener('change', toggleRecurrence));
     toggleRecurrence();
+
+    // ----- 2b. Toggle max-per-day input by completion_limit -----
+    const completionLimitRadios = document.querySelectorAll('input[name="completion_limit"]');
+    const maxPerDayGroup = document.getElementById('max-per-day-group');
+
+    function toggleMaxPerDay() {
+        const selected = document.querySelector('input[name="completion_limit"]:checked');
+        const val = selected ? selected.value : '';
+        if (val === 'multiple') {
+            maxPerDayGroup.classList.remove('d-none');
+        } else {
+            maxPerDayGroup.classList.add('d-none');
+        }
+    }
+    completionLimitRadios.forEach(r => r.addEventListener('change', toggleMaxPerDay));
+    toggleMaxPerDay();
 
     // ----- 3. Weekday checkboxes -> hidden recurrence_days field -----
     const weekdayChecks = document.querySelectorAll('.weekday-check');
