@@ -95,9 +95,10 @@
       </button>
     </div>
   </div>
-    <div id="reconnecting-badge" class="position-fixed bottom-0 end-0 m-3 badge bg-secondary" style="display: none;">
-      Reconnecting…
-    </div>
+</div>
+
+<div id="reconnecting-badge" class="position-fixed bottom-0 end-0 m-3 badge bg-secondary" style="display: none;">
+  Reconnecting…
 </div>
 
 <style>
@@ -304,6 +305,10 @@ async function startTimer() {
             startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Timer';
             return;
         }
+        // Reset the button so a failed initial poll doesn't leave the user stuck
+        // on a disabled spinner. The next successful poll's overlay will hide it.
+        startBtn.disabled = false;
+        startBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Timer';
         // Let the next poll render the running state.
         pollState();
     } catch (err) {
