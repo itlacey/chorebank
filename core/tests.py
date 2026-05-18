@@ -1,10 +1,10 @@
-from datetime import timedelta
+from datetime import date, time, timedelta
 
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import TimeBankTransaction, TimerSession, User
+from core.models import Chore, ChoreInstance, TimeBankTransaction, TimerSession, User
 
 
 def _make_kid(balance_minutes=60):
@@ -132,3 +132,50 @@ class TimerStateViewTests(TestCase):
         session.refresh_from_db()
         self.assertIsNotNone(session.ended_at)
         self.assertEqual(session.ended_reason, "timer_expired")
+
+
+def _make_parent():
+    return User.objects.create_user(
+        username="mom", password="x", first_name="Mom", role=User.Role.PARENT
+    )
+
+
+def _make_chore(parent, **overrides):
+    defaults = dict(
+        name="Test Chore",
+        chore_type=Chore.ChoreType.REQUIRED,
+        reward_minutes=5,
+        penalty_minutes=10,
+        time_of_day=Chore.TimeOfDay.MORNING,
+        deadline_time=time(9, 0),
+        recurrence_type=Chore.RecurrenceType.DAILY,
+        created_by=parent,
+    )
+    defaults.update(overrides)
+    return Chore.objects.create(**defaults)
+
+
+class MultiCompletionSchemaTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid(balance_minutes=0)
+
+    def test_chore_max_per_day_defaults_to_1(self):
+        chore = _make_chore(self.parent)
+        self.assertEqual(chore.max_per_day, 1)
+
+    def test_chore_max_per_day_can_be_null(self):
+        chore = _make_chore(self.parent, max_per_day=None)
+        self.assertIsNone(chore.max_per_day)
+
+    def test_chore_deadline_time_can_be_null(self):
+        chore = _make_chore(self.parent, deadline_time=None)
+        self.assertIsNone(chore.deadline_time)
+
+    def test_chore_instance_completion_count_defaults_to_0(self):
+        chore = _make_chore(self.parent)
+        chore.assigned_to.add(self.kid)
+        inst = ChoreInstance.objects.create(
+            chore=chore, assigned_to=self.kid, due_date=date(2026, 1, 1)
+        )
+        self.assertEqual(inst.completion_count, 0)

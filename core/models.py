@@ -137,7 +137,7 @@ class Chore(models.Model):
     reward_minutes = models.PositiveIntegerField()
     penalty_minutes = models.PositiveIntegerField(default=0)
     time_of_day = models.CharField(max_length=10, choices=TimeOfDay.choices)
-    deadline_time = models.TimeField()
+    deadline_time = models.TimeField(null=True, blank=True)
     assigned_to = models.ManyToManyField(
         "User",
         related_name="assigned_chores",
@@ -149,6 +149,12 @@ class Chore(models.Model):
     recurrence_days = models.CharField(max_length=20, blank=True, default="")
     recurrence_interval = models.PositiveIntegerField(null=True, blank=True)
     one_off_date = models.DateField(null=True, blank=True)
+    max_per_day = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        default=1,
+        help_text="1 = once a day, N = capped at N, NULL = unlimited.",
+    )
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         "User", on_delete=models.CASCADE, related_name="created_chores"
@@ -176,6 +182,7 @@ class ChoreInstance(models.Model):
     completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
     penalty_applied = models.BooleanField(default=False)
+    completion_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = ["chore", "assigned_to", "due_date"]
