@@ -401,3 +401,10 @@ class ChoreFormCompletionLimitTests(TestCase):
         chore = _make_chore(self.parent, max_per_day=1)
         form = ChoreForm(instance=chore)
         self.assertEqual(form.fields["completion_limit"].initial, "once")
+
+    def test_multiple_with_1_emits_single_error(self):
+        form = ChoreForm(
+            data=self._base_data(completion_limit="multiple", max_per_day_value="1")
+        )
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors["max_per_day_value"]), 1)

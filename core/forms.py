@@ -127,10 +127,12 @@ class ChoreForm(forms.ModelForm):
                 )
 
         # Completion limit: validate the synthetic pair.
+        # Only add our custom error when there is no existing field-level error
+        # on max_per_day_value (e.g. the min_value=2 validator already fired).
+        # This avoids stacking two errors on the same field for value=1.
         limit = cleaned.get("completion_limit")
         if limit == self.LIMIT_MULTIPLE:
-            value = cleaned.get("max_per_day_value")
-            if not value or value < 2:
+            if cleaned.get("max_per_day_value") is None and "max_per_day_value" not in self.errors:
                 self.add_error(
                     "max_per_day_value",
                     "Choose a number of 2 or more when allowing multiple completions.",
