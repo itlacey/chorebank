@@ -183,6 +183,19 @@ class MultiCompletionSchemaTests(TestCase):
         self.assertEqual(inst.completion_count, 0)
 
 
+class TimerPrerequisiteSchemaTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+
+    def test_chore_timer_prerequisite_defaults_to_false(self):
+        chore = _make_chore(self.parent)
+        self.assertFalse(chore.timer_prerequisite)
+
+    def test_chore_timer_prerequisite_can_be_true(self):
+        chore = _make_chore(self.parent, timer_prerequisite=True)
+        self.assertTrue(chore.timer_prerequisite)
+
+
 class PenaltyJobNullDeadlineTests(TestCase):
     def setUp(self):
         self.parent = _make_parent()
