@@ -645,6 +645,19 @@ class TimerStartView(KidRequiredMixin, View):
             )
 
         with transaction.atomic():
+            # Prerequisite chore gate
+            has_incomplete_prereqs = ChoreInstance.objects.filter(
+                assigned_to=request.user,
+                due_date=localdate(),
+                completed=False,
+                chore__timer_prerequisite=True,
+            ).exists()
+            if has_incomplete_prereqs:
+                return JsonResponse(
+                    {"error": "Complete your required chores first"},
+                    status=400,
+                )
+
             balance = TimeBankTransaction.get_balance(request.user)
             if balance <= 0 or balance < minutes:
                 return JsonResponse(

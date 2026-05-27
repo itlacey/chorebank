@@ -1,3 +1,4 @@
+import json
 from datetime import date, time, timedelta
 
 from django.test import TestCase, override_settings
@@ -536,3 +537,36 @@ class TimerPrerequisiteGateTests(TestCase):
         self.assertTrue(resp.context["timer_blocked"])
         self.assertContains(resp, "Brush Teeth")
         self.assertContains(resp, "Make Bed")
+
+    def test_timer_start_rejected_when_prereq_incomplete(self):
+        self._create_instances()
+        resp = self.client.post(
+            reverse("timer_start"),
+            data=json.dumps({"minutes": 10}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertIn("chores", data["error"].lower())
+        self.assertFalse(
+            TimerSession.objects.filter(kid=self.kid).exists()
+        )
+
+    def test_timer_start_allowed_when_prereq_complete(self):
+        self._create_instances()
+        inst = ChoreInstance.objects.get(
+            chore=self.prereq_chore, assigned_to=self.kid
+        )
+        inst.completed = True
+        inst.completed_at = timezone.now()
+        inst.save()
+
+        resp = self.client.post(
+            reverse("timer_start"),
+            data=json.dumps({"minutes": 10}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(
+            TimerSession.objects.filter(kid=self.kid).exists()
+        )
