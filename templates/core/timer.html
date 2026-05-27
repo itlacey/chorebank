@@ -12,12 +12,33 @@
       <div class="col-lg-6 col-md-8">
         <div class="card shadow-sm">
           <div class="card-body text-center py-5">
+            {% if timer_blocked %}
+            <div style="font-size: 3rem;">&#x1f512;</div>
+            <h2 class="mb-2">Finish your chores first!</h2>
+            <p class="text-muted mb-4">Complete these before using screen time</p>
+            <div class="text-start mx-auto" style="max-width: 320px;">
+              {% for inst in prerequisite_chores %}
+              <div class="d-flex align-items-center gap-2 p-2 mb-2 border rounded">
+                {% if inst.completed %}
+                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                <span class="text-decoration-line-through text-muted">{{ inst.chore.name }}</span>
+                {% else %}
+                <i class="bi bi-circle text-danger fs-5"></i>
+                <span>{{ inst.chore.name }}</span>
+                {% endif %}
+                <span class="ms-auto badge bg-light text-dark">{{ inst.chore.get_time_of_day_display }}</span>
+              </div>
+              {% endfor %}
+            </div>
+            <a href="{% url 'kid_chore_list' %}" class="btn btn-primary btn-lg mt-4">
+              <i class="bi bi-check2-square me-2"></i>Go to My Chores
+            </a>
+
+            {% elif balance <= 0 %}
             <h2 class="mb-3">Screen Time Timer</h2>
             <p class="fs-4 mb-4">
-              You have <strong id="balance-display" class="{% if balance > 0 %}text-success{% elif balance < 15 %}text-warning{% else %}text-danger{% endif %}">{{ balance_display }}</strong> available
+              You have <strong id="balance-display" class="text-danger">{{ balance_display }}</strong> available
             </p>
-
-            {% if balance <= 0 %}
             <div class="alert alert-warning">
               <i class="bi bi-exclamation-triangle me-2"></i>
               You need to earn more time! Complete some chores.
@@ -32,7 +53,13 @@
               <i class="bi bi-chat-heart me-1"></i>Ask for More Time
             </button>
             <div id="ask-result" class="mt-2"></div>
+
             {% else %}
+            <h2 class="mb-3">Screen Time Timer</h2>
+            <p class="fs-4 mb-4">
+              You have <strong id="balance-display" class="{% if balance > 0 %}text-success{% elif balance < 15 %}text-warning{% else %}text-danger{% endif %}">{{ balance_display }}</strong> available
+            </p>
+
             <!-- Minute Picker -->
             <div class="mb-4">
               <label for="minutes-input" class="form-label fs-5">How many minutes?</label>

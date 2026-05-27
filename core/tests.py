@@ -1,8 +1,9 @@
 from datetime import date, time, timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.timezone import localdate
 
 from core.forms import ChoreForm
 from core.models import Chore, ChoreInstance, TimeBankTransaction, TimerSession, User
@@ -446,3 +447,92 @@ class ChoreFormCompletionLimitTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertEqual(len(form.errors["max_per_day_value"]), 1)
+
+
+@override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+class TimerPrerequisiteGateTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid(balance_minutes=60)
+        self.client.force_login(self.kid)
+        self.client.cookies["browser_tz"] = "UTC"
+
+        self.prereq_chore = _make_chore(
+            self.parent, name="Make Bed", timer_prerequisite=True
+        )
+        self.prereq_chore.assigned_to.add(self.kid)
+
+        self.normal_chore = _make_chore(
+            self.parent, name="Read Book", timer_prerequisite=False
+        )
+        self.normal_chore.assigned_to.add(self.kid)
+
+    def _create_instances(self, today=None):
+        today = today or localdate()
+        ChoreInstance.objects.create(
+            chore=self.prereq_chore, assigned_to=self.kid, due_date=today
+        )
+        ChoreInstance.objects.create(
+            chore=self.normal_chore, assigned_to=self.kid, due_date=today
+        )
+
+    def test_timer_page_blocked_when_prereq_incomplete(self):
+        self._create_instances()
+        resp = self.client.get(reverse("kid_timer"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context["timer_blocked"])
+        self.assertContains(resp, "Finish your chores first")
+        self.assertContains(resp, "Make Bed")
+
+    def test_timer_page_unblocked_when_prereq_complete(self):
+        self._create_instances()
+        inst = ChoreInstance.objects.get(
+            chore=self.prereq_chore, assigned_to=self.kid
+        )
+        inst.completed = True
+        inst.completed_at = timezone.now()
+        inst.save()
+
+        resp = self.client.get(reverse("kid_timer"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context["timer_blocked"])
+        self.assertNotContains(resp, "Finish your chores first")
+
+    def test_timer_page_unblocked_when_no_prereq_chores(self):
+        self.prereq_chore.timer_prerequisite = False
+        self.prereq_chore.save()
+        self._create_instances()
+
+        resp = self.client.get(reverse("kid_timer"))
+        self.assertFalse(resp.context["timer_blocked"])
+
+    def test_timer_page_unblocked_when_no_instances_today(self):
+        resp = self.client.get(reverse("kid_timer"))
+        self.assertFalse(resp.context["timer_blocked"])
+
+    def test_timer_page_shows_completed_prereqs_crossed_out(self):
+        self._create_instances()
+        second_prereq = _make_chore(
+            self.parent, name="Brush Teeth", timer_prerequisite=True
+        )
+        second_prereq.assigned_to.add(self.kid)
+        ChoreInstance.objects.create(
+            chore=second_prereq, assigned_to=self.kid, due_date=localdate()
+        )
+        # Complete one of the two prerequisites
+        inst = ChoreInstance.objects.get(
+            chore=second_prereq, assigned_to=self.kid
+        )
+        inst.completed = True
+        inst.completed_at = timezone.now()
+        inst.save()
+
+        resp = self.client.get(reverse("kid_timer"))
+        self.assertTrue(resp.context["timer_blocked"])
+        self.assertContains(resp, "Brush Teeth")
+        self.assertContains(resp, "Make Bed")

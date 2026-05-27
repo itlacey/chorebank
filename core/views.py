@@ -617,6 +617,15 @@ class TimerPageView(KidRequiredMixin, TemplateView):
         balance = TimeBankTransaction.get_balance(self.request.user)
         ctx["balance"] = balance
         ctx["balance_display"] = format_balance(balance)
+
+        today = localdate()
+        prereq_instances = ChoreInstance.objects.filter(
+            assigned_to=self.request.user,
+            due_date=today,
+            chore__timer_prerequisite=True,
+        ).select_related("chore")
+        ctx["timer_blocked"] = prereq_instances.filter(completed=False).exists()
+        ctx["prerequisite_chores"] = prereq_instances
         return ctx
 
 
