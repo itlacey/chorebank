@@ -186,6 +186,7 @@ class MultiCompletionSchemaTests(TestCase):
 class TimerPrerequisiteSchemaTests(TestCase):
     def setUp(self):
         self.parent = _make_parent()
+        self.kid = _make_kid(balance_minutes=0)
 
     def test_chore_timer_prerequisite_defaults_to_false(self):
         chore = _make_chore(self.parent)
@@ -193,6 +194,30 @@ class TimerPrerequisiteSchemaTests(TestCase):
 
     def test_chore_timer_prerequisite_can_be_true(self):
         chore = _make_chore(self.parent, timer_prerequisite=True)
+        self.assertTrue(chore.timer_prerequisite)
+
+    def test_chore_form_includes_timer_prerequisite_field(self):
+        form = ChoreForm()
+        self.assertIn("timer_prerequisite", form.fields)
+
+    def test_chore_form_saves_timer_prerequisite(self):
+        form_data = {
+            "name": "Brush Teeth",
+            "chore_type": "required",
+            "reward_minutes": 5,
+            "penalty_minutes": 5,
+            "time_of_day": "morning",
+            "assigned_to": [self.kid.pk],
+            "recurrence_type": "daily",
+            "completion_limit": "once",
+            "timer_prerequisite": True,
+        }
+        form = ChoreForm(data=form_data)
+        form.fields["assigned_to"].queryset = User.objects.filter(role=User.Role.KID)
+        self.assertTrue(form.is_valid(), form.errors)
+        chore = form.save(commit=False)
+        chore.created_by = self.parent
+        chore.save()
         self.assertTrue(chore.timer_prerequisite)
 
 

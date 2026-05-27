@@ -48,6 +48,7 @@ class ChoreForm(forms.ModelForm):
             "recurrence_days",
             "recurrence_interval",
             "one_off_date",
+            "timer_prerequisite",
         ]
         widgets = {
             "chore_type": forms.RadioSelect,
