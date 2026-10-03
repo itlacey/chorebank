@@ -36,6 +36,10 @@
 {% endfor %}
 {% endif %}
 
+<a href="{% url 'kid_chore_request' %}" class="btn btn-outline-primary w-100 mb-4 py-2">
+  <i class="bi bi-plus-lg me-1"></i> Suggest a chore
+</a>
+
 {% if streak > 0 %}
 <div class="alert mb-4 py-2 px-3 rounded-3 d-flex align-items-center" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border: none;">
     <span style="font-size: 1.3rem;" class="me-2">&#x1F525;</span>
@@ -145,9 +149,6 @@
 </div>
 {% endfor %}
 {% endif %}
-<a href="{% url 'kid_chore_request' %}" class="btn btn-outline-primary w-100 mt-4 py-2">
-  <i class="bi bi-plus-lg me-1"></i> Suggest a chore
-</a>
 {% endblock %}
 
 {% block extra_js %}
