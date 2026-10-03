@@ -3,6 +3,7 @@
 ChoreForm -- ModelForm for creating and editing chores with conditional
 validation (bonus chores force penalty to 0, recurrence fields validated
 based on recurrence_type selection).
+KidChoreRequestForm -- ChoreForm minus assigned_to, for kid chore suggestions.
 """
 
 from django import forms
@@ -181,3 +182,12 @@ class TimeAdjustForm(forms.Form):
             }
         ),
     )
+
+
+class KidChoreRequestForm(ChoreForm):
+    """ChoreForm for a kid suggesting a chore. assigned_to is removed;
+    the view assigns the chore to the requesting kid."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        del self.fields["assigned_to"]
