@@ -30,23 +30,17 @@
         {% endif %}
 
         <!-- Chore Requests -->
-        {% if chore_requests %}
-        <div class="alert alert-info mb-4" id="chore-requests">
-            <strong><i class="bi bi-lightbulb me-1"></i>Chore requests ({{ chore_requests|length }})</strong>
-            {% for chore in chore_requests %}
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white rounded-3 px-3 py-2 mt-2" id="chore-req-{{ chore.pk }}">
-                <span>
-                    {{ chore.created_by.emoji_avatar }} {{ chore.created_by.first_name }}: <span class="fw-semibold">{{ chore.name }}</span>
-                    <small class="text-muted">&middot; +{{ chore.reward_minutes }} min &middot; {% if chore.recurrence_type == "daily" %}every day{% else %}{{ chore.get_recurrence_type_display|lower }}{% endif %} &middot; {{ chore.get_time_of_day_display|lower }}</small>
-                </span>
-                <span class="d-flex gap-2">
-                    <button class="btn btn-sm btn-success" hx-post="{% url 'chore_request_approve' chore.pk %}" hx-target="#chore-req-{{ chore.pk }}" hx-swap="outerHTML">Approve</button>
-                    <a class="btn btn-sm btn-outline-primary" href="{% url 'chore_edit' chore.pk %}">Edit</a>
-                    <button class="btn btn-sm btn-outline-danger" hx-post="{% url 'chore_request_reject' chore.pk %}" hx-target="#chore-req-{{ chore.pk }}" hx-swap="outerHTML" hx-confirm="Reject this chore request?">Reject</button>
-                </span>
-            </div>
-            {% endfor %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if chore_requests %}
+        {% include "core/_chore_requests_box.html" %}
         {% endif %}
 
         <!-- Kid cards -->

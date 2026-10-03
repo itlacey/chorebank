@@ -1044,6 +1044,20 @@ class TimeRequestDismissView(ParentRequiredMixin, View):
         return render(request, "core/_empty.html")
 
 
+def _render_chore_requests_box(request):
+    """Re-render the remaining chore requests box; empty when none are left."""
+    chore_requests = list(
+        Chore.objects.filter(pending_approval=True)
+        .select_related("created_by")
+        .order_by("created_at")
+    )
+    if not chore_requests:
+        return render(request, "core/_empty.html")
+    return render(
+        request, "core/_chore_requests_box.html", {"chore_requests": chore_requests}
+    )
+
+
 class ChoreRequestApproveView(ParentRequiredMixin, View):
     """Parent approves a kid's pending chore request."""
 
@@ -1053,7 +1067,7 @@ class ChoreRequestApproveView(ParentRequiredMixin, View):
         chore.is_active = True
         chore.save(update_fields=["pending_approval", "is_active"])
         generate_chore_instances(target_date=localdate(), days_ahead=7)
-        return render(request, "core/_empty.html")
+        return _render_chore_requests_box(request)
 
 
 class ChoreRequestRejectView(ParentRequiredMixin, View):
@@ -1061,7 +1075,7 @@ class ChoreRequestRejectView(ParentRequiredMixin, View):
 
     def post(self, request, pk):
         get_object_or_404(Chore, pk=pk, pending_approval=True).delete()
-        return render(request, "core/_empty.html")
+        return _render_chore_requests_box(request)
 
 
 EMOJI_CHOICES = [

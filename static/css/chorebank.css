@@ -224,3 +224,11 @@ body {
     border-radius: 8px;
     cursor: pointer;
 }
+
+/* Chore request action buttons: 44px touch target */
+.chore-req-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}

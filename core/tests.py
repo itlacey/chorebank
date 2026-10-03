@@ -785,6 +785,19 @@ class ChoreRequestApproveTests(TestCase):
         resp = self.client.get(reverse("kid_chore_list"))
         self.assertEqual(len(resp.context["afternoon_chores"]), 1)
 
+    def test_approve_returns_remaining_box_with_count(self):
+        other = _make_pending(self.kid, name="Second")
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertContains(resp, "Chore requests (1)")
+        self.assertContains(resp, 'id="chore-requests"')
+        self.assertContains(resp, f"chore-req-{other.pk}")
+
+    def test_approve_last_returns_empty(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertNotContains(resp, "Chore requests")
+
     def test_approve_get_not_allowed(self):
         self.client.force_login(self.parent)
         self.assertEqual(self.client.get(self.url).status_code, 405)
@@ -817,6 +830,17 @@ class ChoreRequestRejectTests(TestCase):
         self.client.force_login(self.parent)
         self.assertEqual(self.client.post(self.url).status_code, 200)
         self.assertFalse(Chore.objects.filter(pk=self.chore.pk).exists())
+
+    def test_reject_keeps_box_count_correct(self):
+        _make_pending(self.kid, name="Second")
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertContains(resp, "Chore requests (1)")
+
+    def test_reject_last_returns_empty(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertNotContains(resp, "Chore requests")
 
     def test_kid_cannot_reject(self):
         self.client.force_login(self.kid)
@@ -858,6 +882,15 @@ class ChoreRequestEditTests(TestCase):
         self.assertTrue(self.chore.pending_approval)
         self.assertFalse(self.chore.is_active)
         self.assertEqual(ChoreInstance.objects.count(), 0)
+
+    def test_edit_message_shown_on_parent_home(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(
+            self.url, self._post_data(name="Renamed"), follow=True
+        )
+        self.assertContains(resp, "updated!")
+        resp = self.client.get(reverse("parent_home"))
+        self.assertNotContains(resp, "updated!")
 
     def test_edit_soft_deleted_still_404(self):
         self.chore.pending_approval = False
