@@ -156,6 +156,9 @@ class Chore(models.Model):
         help_text="1 = once a day, N = capped at N, NULL = unlimited.",
     )
     is_active = models.BooleanField(default=True)
+    # True = a kid suggested this chore and no parent has approved it yet
+    # (is_active is False while pending).
+    pending_approval = models.BooleanField(default=False)
     timer_prerequisite = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         "User", on_delete=models.CASCADE, related_name="created_chores"

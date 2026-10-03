@@ -1,17 +1,17 @@
-{% extends "base_parent.html" %}
+{% extends base_template|default:"base_parent.html" %}
 
-{% block title %}{% if editing %}Edit Chore{% else %}Create Chore{% endif %} - ChoreBank{% endblock %}
+{% block title %}{% if kid_request %}Suggest a chore{% elif editing %}Edit Chore{% else %}Create Chore{% endif %} - ChoreBank{% endblock %}
 
 {% block nav_chores_active %}active{% endblock %}
 
-{% block page_title %}{% if editing %}Edit Chore{% else %}Create Chore{% endif %}{% endblock %}
+{% block page_title %}{% if kid_request %}Suggest a chore{% elif editing %}Edit Chore{% else %}Create Chore{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
 
         <!-- Template picker -->
-        {% if not editing %}
+        {% if not editing and not kid_request %}
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body">
                 <h6 class="card-title mb-2">Start from a template</h6>
@@ -35,6 +35,10 @@
             <div class="card-body">
                 <form method="post" novalidate>
                     {% csrf_token %}
+
+                    {% if editing and chore.pending_approval %}
+                    <div class="alert alert-info py-2 small">This is a chore request from {{ chore.created_by.first_name }}. Saving keeps it waiting. Approve it from the Dashboard.</div>
+                    {% endif %}
 
                     <!-- Non-field errors -->
                     {% if form.non_field_errors %}
@@ -135,6 +139,7 @@
                     </div>
 
                     <!-- Row 5: Assigned To (checkboxes) -->
+                    {% if not kid_request %}
                     <div class="mb-3">
                         <label class="form-label fw-semibold d-block">Assign To</label>
                         {% for checkbox in form.assigned_to %}
@@ -147,6 +152,7 @@
                         <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
+                    {% endif %}
 
                     <!-- Row 5b: Completion limit -->
                     <div class="mb-3">
@@ -237,9 +243,9 @@
                     <!-- Submit -->
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> Save Chore
+                            {% if kid_request %}<i class="bi bi-send me-1"></i> Send to a parent{% else %}<i class="bi bi-check-lg me-1"></i> Save Chore{% endif %}
                         </button>
-                        <a href="{% url 'chore_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="{% if kid_request %}{% url 'kid_chore_list' %}{% elif chore.pending_approval %}{% url 'parent_home' %}{% else %}{% url 'chore_list' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                 </form>
             </div>

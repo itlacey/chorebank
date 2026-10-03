@@ -6,9 +6,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import localdate
 
-from core.forms import ChoreForm
+from core.forms import ChoreForm, KidChoreRequestForm
 from core.models import Chore, ChoreInstance, TimeBankTransaction, TimerSession, User
-from core.tasks import process_penalties
+from core.tasks import generate_chore_instances, process_penalties
 
 
 def _make_kid(balance_minutes=60):
@@ -570,3 +570,347 @@ class TimerPrerequisiteGateTests(TestCase):
         self.assertTrue(
             TimerSession.objects.filter(kid=self.kid).exists()
         )
+
+
+# ---------------------------------------------------------------------------
+# Kid chore requests
+# ---------------------------------------------------------------------------
+
+_STORAGE_OVERRIDE = dict(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+
+
+def _make_kid2():
+    return User.objects.create_user(
+        username="ava", password="x", first_name="Ava", role=User.Role.KID
+    )
+
+
+def _make_pending(kid, name="Feed the fish", **overrides):
+    defaults = dict(
+        name=name,
+        chore_type=Chore.ChoreType.BONUS,
+        reward_minutes=15,
+        penalty_minutes=0,
+        time_of_day=Chore.TimeOfDay.AFTERNOON,
+        deadline_time=None,
+        recurrence_type=Chore.RecurrenceType.DAILY,
+        created_by=kid,
+        is_active=False,
+        pending_approval=True,
+    )
+    defaults.update(overrides)
+    chore = Chore.objects.create(**defaults)
+    chore.assigned_to.set([kid])
+    return chore
+
+
+def _request_post(**overrides):
+    data = {
+        "name": "Feed the fish",
+        "chore_type": "bonus",
+        "reward_minutes": 15,
+        "time_of_day": "afternoon",
+        "recurrence_type": "daily",
+        "completion_limit": "once",
+    }
+    data.update(overrides)
+    return data
+
+
+class ChorePendingApprovalSchemaTests(TestCase):
+    def test_default_false(self):
+        chore = _make_chore(_make_parent())
+        self.assertFalse(chore.pending_approval)
+
+    def test_kid_request_form_has_no_assigned_to(self):
+        self.assertNotIn("assigned_to", KidChoreRequestForm().fields)
+        self.assertIn("assigned_to", ChoreForm().fields)
+
+
+@override_settings(**_STORAGE_OVERRIDE)
+class KidChoreRequestTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid()
+        self.kid2 = _make_kid2()
+        self.client.force_login(self.kid)
+        self.client.cookies["browser_tz"] = "UTC"
+        self.url = reverse("kid_chore_request")
+
+    def test_get_renders_suggest_form(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Suggest a chore")
+        self.assertContains(resp, "Send to a parent")
+        self.assertNotContains(resp, 'name="assigned_to"')
+
+    def test_post_creates_pending_chore(self):
+        self.client.post(self.url, _request_post())
+        chore = Chore.objects.get()
+        self.assertFalse(chore.is_active)
+        self.assertTrue(chore.pending_approval)
+        self.assertEqual(chore.created_by, self.kid)
+        self.assertEqual(list(chore.assigned_to.all()), [self.kid])
+        self.assertEqual(chore.max_per_day, 1)
+
+    def test_post_ignores_posted_assigned_to(self):
+        self.client.post(self.url, _request_post(assigned_to=[self.kid2.pk]))
+        chore = Chore.objects.get()
+        self.assertEqual(list(chore.assigned_to.all()), [self.kid])
+
+    def test_post_ignores_posted_approval_flags(self):
+        self.client.post(self.url, _request_post(is_active="on", pending_approval=""))
+        chore = Chore.objects.get()
+        self.assertFalse(chore.is_active)
+        self.assertTrue(chore.pending_approval)
+
+    def test_post_redirects_with_message(self):
+        resp = self.client.post(self.url, _request_post(), follow=True)
+        self.assertRedirects(resp, reverse("kid_chore_list"))
+        self.assertContains(resp, 'Sent! A parent will look at')
+
+    def test_invalid_post_rerenders_and_saves_nothing(self):
+        resp = self.client.post(self.url, _request_post(chore_type="required"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context["form"].errors)
+        self.assertEqual(Chore.objects.count(), 0)
+
+    def test_post_creates_no_instances(self):
+        self.client.post(self.url, _request_post())
+        self.assertEqual(ChoreInstance.objects.count(), 0)
+
+    def test_parent_cannot_use_kid_form(self):
+        self.client.force_login(self.parent)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_anonymous_redirected_to_login(self):
+        self.client.logout()
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 302)
+
+
+@override_settings(**_STORAGE_OVERRIDE)
+class PendingChoreLeakTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid()
+        self.kid2 = _make_kid2()
+        self.client.cookies["browser_tz"] = "UTC"
+
+    def test_generate_chore_instances_skips_pending(self):
+        chore = _make_pending(self.kid)
+        generate_chore_instances(target_date=localdate(), days_ahead=7)
+        self.assertEqual(ChoreInstance.objects.filter(chore=chore).count(), 0)
+
+    def test_kid_list_shows_own_pending_only(self):
+        _make_pending(self.kid, name="Mine Pending")
+        _make_pending(self.kid2, name="Theirs Pending")
+        self.client.force_login(self.kid)
+        resp = self.client.get(reverse("kid_chore_list"))
+        self.assertContains(resp, "Waiting for a parent")
+        self.assertContains(resp, "Mine Pending")
+        self.assertNotContains(resp, "Theirs Pending")
+        self.assertContains(resp, "Sent today")
+        self.assertEqual(resp.context["afternoon_chores"], [])
+
+    def test_parent_chore_list_excludes_pending(self):
+        _make_pending(self.kid, name="Mine Pending")
+        self.client.force_login(self.parent)
+        resp = self.client.get(reverse("chore_list"))
+        self.assertNotContains(resp, "Mine Pending")
+
+    def test_kid_list_has_suggest_button(self):
+        self.client.force_login(self.kid)
+        resp = self.client.get(reverse("kid_chore_list"))
+        self.assertContains(resp, reverse("kid_chore_request"))
+
+
+@override_settings(**_STORAGE_OVERRIDE)
+class ParentChoreRequestBoxTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid()
+        self.kid2 = _make_kid2()
+        self.client.force_login(self.parent)
+        self.client.cookies["browser_tz"] = "UTC"
+
+    def test_box_shows_count_and_details(self):
+        _make_pending(self.kid, name="Feed the fish")
+        _make_pending(self.kid2, name="Walk dog")
+        resp = self.client.get(reverse("parent_home"))
+        self.assertContains(resp, "Chore requests (2)")
+        self.assertContains(resp, "Zeke")
+        self.assertContains(resp, "Ava")
+        self.assertContains(resp, "+15 min")
+        self.assertContains(resp, "every day")
+        self.assertContains(resp, "afternoon")
+
+    def test_box_hidden_when_none(self):
+        resp = self.client.get(reverse("parent_home"))
+        self.assertNotContains(resp, "Chore requests")
+
+    def test_soft_deleted_chore_not_listed(self):
+        _make_pending(self.kid, name="Gone", pending_approval=False)
+        resp = self.client.get(reverse("parent_home"))
+        self.assertNotContains(resp, "Chore requests")
+
+
+@override_settings(**_STORAGE_OVERRIDE)
+class ChoreRequestApproveTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid()
+        self.chore = _make_pending(self.kid)
+        self.client.cookies["browser_tz"] = "UTC"
+        self.url = reverse("chore_request_approve", args=[self.chore.pk])
+
+    def test_approve_activates_and_creates_today_instance(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertEqual(resp.status_code, 200)
+        self.chore.refresh_from_db()
+        self.assertFalse(self.chore.pending_approval)
+        self.assertTrue(self.chore.is_active)
+        self.assertTrue(
+            ChoreInstance.objects.filter(
+                chore=self.chore, assigned_to=self.kid, due_date=localdate()
+            ).exists()
+        )
+        self.client.force_login(self.kid)
+        resp = self.client.get(reverse("kid_chore_list"))
+        self.assertEqual(len(resp.context["afternoon_chores"]), 1)
+
+    def test_approve_returns_remaining_box_with_count(self):
+        other = _make_pending(self.kid, name="Second")
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertContains(resp, "Chore requests (1)")
+        self.assertContains(resp, 'id="chore-requests"')
+        self.assertContains(resp, f"chore-req-{other.pk}")
+
+    def test_approve_last_returns_empty(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertNotContains(resp, "Chore requests")
+
+    def test_approve_get_not_allowed(self):
+        self.client.force_login(self.parent)
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+        self.chore.refresh_from_db()
+        self.assertTrue(self.chore.pending_approval)
+
+    def test_kid_cannot_approve(self):
+        self.client.force_login(self.kid)
+        self.assertEqual(self.client.post(self.url).status_code, 403)
+        self.chore.refresh_from_db()
+        self.assertTrue(self.chore.pending_approval)
+        self.assertEqual(ChoreInstance.objects.count(), 0)
+
+    def test_approve_non_pending_404(self):
+        active = _make_chore(self.parent)
+        self.client.force_login(self.parent)
+        resp = self.client.post(reverse("chore_request_approve", args=[active.pk]))
+        self.assertEqual(resp.status_code, 404)
+
+
+@override_settings(**_STORAGE_OVERRIDE)
+class ChoreRequestRejectTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid()
+        self.chore = _make_pending(self.kid)
+        self.url = reverse("chore_request_reject", args=[self.chore.pk])
+
+    def test_reject_deletes(self):
+        self.client.force_login(self.parent)
+        self.assertEqual(self.client.post(self.url).status_code, 200)
+        self.assertFalse(Chore.objects.filter(pk=self.chore.pk).exists())
+
+    def test_reject_keeps_box_count_correct(self):
+        _make_pending(self.kid, name="Second")
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertContains(resp, "Chore requests (1)")
+
+    def test_reject_last_returns_empty(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url)
+        self.assertNotContains(resp, "Chore requests")
+
+    def test_kid_cannot_reject(self):
+        self.client.force_login(self.kid)
+        self.assertEqual(self.client.post(self.url).status_code, 403)
+        self.assertTrue(Chore.objects.filter(pk=self.chore.pk).exists())
+
+    def test_reject_non_pending_404(self):
+        active = _make_chore(self.parent)
+        self.client.force_login(self.parent)
+        resp = self.client.post(reverse("chore_request_reject", args=[active.pk]))
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(Chore.objects.filter(pk=active.pk).exists())
+
+
+@override_settings(**_STORAGE_OVERRIDE)
+class ChoreRequestEditTests(TestCase):
+    def setUp(self):
+        self.parent = _make_parent()
+        self.kid = _make_kid()
+        self.chore = _make_pending(self.kid)
+        self.url = reverse("chore_edit", args=[self.chore.pk])
+        self.client.cookies["browser_tz"] = "UTC"
+
+    def _post_data(self, **kw):
+        return _request_post(assigned_to=[self.kid.pk], **kw)
+
+    def test_edit_get_pending_200(self):
+        self.client.force_login(self.parent)
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "chore request from Zeke")
+
+    def test_edit_post_keeps_pending(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(self.url, self._post_data(name="Renamed"))
+        self.assertRedirects(resp, reverse("parent_home"))
+        self.chore.refresh_from_db()
+        self.assertEqual(self.chore.name, "Renamed")
+        self.assertTrue(self.chore.pending_approval)
+        self.assertFalse(self.chore.is_active)
+        self.assertEqual(ChoreInstance.objects.count(), 0)
+
+    def test_edit_message_shown_on_parent_home(self):
+        self.client.force_login(self.parent)
+        resp = self.client.post(
+            self.url, self._post_data(name="Renamed"), follow=True
+        )
+        self.assertContains(resp, "updated!")
+        resp = self.client.get(reverse("parent_home"))
+        self.assertNotContains(resp, "updated!")
+
+    def test_edit_soft_deleted_still_404(self):
+        self.chore.pending_approval = False
+        self.chore.save()
+        self.client.force_login(self.parent)
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+
+    def test_kid_cannot_open_edit(self):
+        self.client.force_login(self.kid)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        resp = self.client.post(self.url, self._post_data(name="Hacked"))
+        self.assertEqual(resp.status_code, 403)
+        self.chore.refresh_from_db()
+        self.assertEqual(self.chore.name, "Feed the fish")
+
+    def test_edit_active_chore_still_redirects_to_chore_list(self):
+        active = _make_chore(self.parent, chore_type=Chore.ChoreType.BONUS, penalty_minutes=0)
+        active.assigned_to.set([self.kid])
+        self.client.force_login(self.parent)
+        resp = self.client.post(
+            reverse("chore_edit", args=[active.pk]), self._post_data(name="Edited")
+        )
+        self.assertRedirects(resp, reverse("chore_list"))

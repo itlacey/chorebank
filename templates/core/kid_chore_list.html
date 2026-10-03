@@ -6,6 +6,7 @@
 
 {% block extra_css %}
 <style>
+.pending-request { border: 2px dashed #B19CD9; background: #FBF9FF; }
 .chore-item.completed {
     opacity: 0.6;
 }
@@ -25,6 +26,15 @@
 {% endblock %}
 
 {% block content %}
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
 
 {% if streak > 0 %}
 <div class="alert mb-4 py-2 px-3 rounded-3 d-flex align-items-center" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border: none;">
@@ -122,6 +132,22 @@
     {% endif %}
 {% endif %}
 
+
+{% if pending_requests %}
+<hr class="my-4">
+<h5 class="text-muted mb-3"><i class="bi bi-hourglass-split me-1"></i> Waiting for a parent</h5>
+{% for req in pending_requests %}
+<div class="card pending-request mb-2" id="pending-{{ req.pk }}">
+  <div class="card-body d-flex align-items-center py-2 px-3">
+    <span class="fw-semibold flex-grow-1">{{ req.name }}</span>
+    <small class="text-muted">{% if req.created_at|date:"Y-m-d" == today|date:"Y-m-d" %}Sent today{% else %}Sent {{ req.created_at|timesince }} ago{% endif %}</small>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+<a href="{% url 'kid_chore_request' %}" class="btn btn-outline-primary w-100 mt-4 py-2">
+  <i class="bi bi-plus-lg me-1"></i> Suggest a chore
+</a>
 {% endblock %}
 
 {% block extra_js %}

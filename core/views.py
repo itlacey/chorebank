@@ -11,6 +11,9 @@ ParentChoreListView    -- List all active chores for parent management
 ParentChoreCreateView  -- Create a new chore
 ParentChoreEditView    -- Edit an existing chore (regenerates instances)
 ParentChoreDeleteView  -- Soft-delete a chore
+KidChoreRequestView    -- Kid suggests a chore (saved as pending approval)
+ChoreRequestApproveView -- Parent approves a pending chore request
+ChoreRequestRejectView -- Parent rejects (deletes) a pending chore request
 ChoreTemplateLoadView  -- JSON endpoint for template picker
 KidChoreListView       -- Kid chore list grouped by time of day
 CompleteChoreView      -- HTMX one-tap chore completion
@@ -40,7 +43,7 @@ from django.utils.timezone import localdate
 from django.views import View
 from django.views.generic import TemplateView
 
-from core.forms import ChoreForm, TimeAdjustForm
+from core.forms import ChoreForm, KidChoreRequestForm, TimeAdjustForm
 from core.mixins import KidRequiredMixin, ParentRequiredMixin
 from core.achievements import check_achievements
 from core.models import (
@@ -291,6 +294,11 @@ class ParentHomeView(ParentRequiredMixin, TemplateView):
         ctx["time_requests"] = TimeRequest.objects.filter(
             dismissed=False
         ).select_related("kid")[:10]
+        ctx["chore_requests"] = list(
+            Chore.objects.filter(pending_approval=True)
+            .select_related("created_by")
+            .order_by("created_at")
+        )
         return ctx
 
 
@@ -352,7 +360,7 @@ class ParentChoreEditView(ParentRequiredMixin, View):
 
     def _get_chore(self, pk):
         chore = get_object_or_404(Chore, pk=pk)
-        if not chore.is_active:
+        if not chore.is_active and not chore.pending_approval:
             raise Http404
         return chore
 
@@ -377,6 +385,8 @@ class ParentChoreEditView(ParentRequiredMixin, View):
             # Regenerate instances so schedule/assignment changes take effect
             generate_chore_instances(target_date=localdate(), days_ahead=7)
             messages.success(request, f'Chore "{chore.name}" updated!')
+            if chore.pending_approval:
+                return redirect("parent_home")
             return redirect("chore_list")
         templates_list = ChoreTemplate.objects.all()
         return render(request, "core/chore_form.html", {
@@ -530,8 +540,42 @@ class KidChoreListView(KidRequiredMixin, TemplateView):
             "evening_chores": evening_chores,
             "upcoming_by_date": upcoming_by_date,
             "streak": ChoreInstance.get_streak(user),
+            "pending_requests": Chore.objects.filter(
+                created_by=user, pending_approval=True
+            ).order_by("-created_at"),
         })
         return ctx
+
+
+class KidChoreRequestView(KidRequiredMixin, View):
+    """Kid suggests a chore using the parent chore form. Saved as pending."""
+
+    def _render(self, request, form):
+        return render(request, "core/chore_form.html", {
+            "form": form,
+            "kid_request": True,
+            "base_template": "base_kid.html",
+            "editing": False,
+        })
+
+    def get(self, request):
+        return self._render(request, KidChoreRequestForm())
+
+    def post(self, request):
+        form = KidChoreRequestForm(request.POST)
+        if form.is_valid():
+            chore = form.save(commit=False)
+            chore.created_by = request.user
+            chore.is_active = False
+            chore.pending_approval = True
+            chore.save()
+            form.save_m2m()
+            chore.assigned_to.set([request.user])
+            messages.success(
+                request, f'Sent! A parent will look at "{chore.name}" soon.'
+            )
+            return redirect("kid_chore_list")
+        return self._render(request, form)
 
 
 class CompleteChoreView(KidRequiredMixin, View):
@@ -998,6 +1042,40 @@ class TimeRequestDismissView(ParentRequiredMixin, View):
         req.dismissed = True
         req.save()
         return render(request, "core/_empty.html")
+
+
+def _render_chore_requests_box(request):
+    """Re-render the remaining chore requests box; empty when none are left."""
+    chore_requests = list(
+        Chore.objects.filter(pending_approval=True)
+        .select_related("created_by")
+        .order_by("created_at")
+    )
+    if not chore_requests:
+        return render(request, "core/_empty.html")
+    return render(
+        request, "core/_chore_requests_box.html", {"chore_requests": chore_requests}
+    )
+
+
+class ChoreRequestApproveView(ParentRequiredMixin, View):
+    """Parent approves a kid's pending chore request."""
+
+    def post(self, request, pk):
+        chore = get_object_or_404(Chore, pk=pk, pending_approval=True)
+        chore.pending_approval = False
+        chore.is_active = True
+        chore.save(update_fields=["pending_approval", "is_active"])
+        generate_chore_instances(target_date=localdate(), days_ahead=7)
+        return _render_chore_requests_box(request)
+
+
+class ChoreRequestRejectView(ParentRequiredMixin, View):
+    """Parent rejects (deletes) a kid's pending chore request."""
+
+    def post(self, request, pk):
+        get_object_or_404(Chore, pk=pk, pending_approval=True).delete()
+        return _render_chore_requests_box(request)
 
 
 EMOJI_CHOICES = [
