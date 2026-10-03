@@ -729,6 +729,11 @@ class PendingChoreLeakTests(TestCase):
         resp = self.client.get(reverse("kid_chore_list"))
         self.assertContains(resp, reverse("kid_chore_request"))
 
+    def test_suggest_button_is_above_todays_chores(self):
+        self.client.force_login(self.kid)
+        html = self.client.get(reverse("kid_chore_list")).content.decode()
+        self.assertLess(html.index(reverse("kid_chore_request")), html.index("Today's Chores"))
+
 
 @override_settings(**_STORAGE_OVERRIDE)
 class ParentChoreRequestBoxTests(TestCase):
